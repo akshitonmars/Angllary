@@ -13,7 +13,7 @@
 - Name: Angllary.
 - Working tagline: Your photos. Your space.
 - Initial interface language: English.
-- Google Sans is requested as the UI typeface and is used when the Android system exposes it; Android sans-serif is the runtime fallback.
+- Google Sans Flex is requested through Android's downloadable-font provider; Android sans-serif is the fallback when the provider is unavailable.
 - User-facing strings live in Android resources to support future localization.
 
 ## Monochrome colour tokens
