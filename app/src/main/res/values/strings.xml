@@ -31,6 +31,11 @@
     <string name="photos_count">%1$d items</string>
     <string name="search_no_results">No matches found</string>
     <string name="search_local_hint">Search stays on this device</string>
-    <string name="viewer_coming_soon">Photo viewer is the next milestone.</string>
+    <string name="viewer_details">Media details</string>
+    <string name="viewer_file">File</string>
+    <string name="viewer_date">Date</string>
+    <string name="viewer_resolution">Resolution</string>
+    <string name="viewer_album">Album</string>
+    <string name="viewer_type">Type</string>
     <string name="feature_coming_soon">This feature will arrive in a later milestone.</string>
 </resources>
