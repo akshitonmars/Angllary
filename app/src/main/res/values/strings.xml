@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Angllary</string>
+    <string name="tab_all">All</string>
+    <string name="tab_albums">Albums</string>
+    <string name="search">Search</string>
+    <string name="search_photos">Search your photos</string>
+    <string name="sort">Sort</string>
+    <string name="grid">Grid</string>
+    <string name="settings">Settings</string>
+    <string name="locked_folder">Locked Folder</string>
+    <string name="recently_deleted">Recently Deleted</string>
+    <string name="allow_photo_access">Allow photo access</string>
+    <string name="library_permission_title">Your library, beautifully simple</string>
+    <string name="library_permission_body">Angllary needs access to the photos and videos you choose to show here. Your media stays on this device.</string>
+    <string name="local_first_note">No account. No automatic uploads. Just your library.</string>
+    <string name="empty_library_title">Nothing here yet</string>
+    <string name="empty_library_body">Photos and videos on this device will appear here.</string>
+    <string name="smart_albums">Smart Albums</string>
+    <string name="smart_albums_pending">Smart Albums will appear as on-device analysis becomes available.</string>
+    <string name="device_albums">Albums on this device</string>
+    <string name="no_albums">No albums found yet</string>
+    <string name="cancel">Cancel</string>
+    <string name="newest_first">Newest first</string>
+    <string name="oldest_first">Oldest first</string>
+    <string name="day">Day</string>
+    <string name="month">Month</string>
+    <string name="year">Year</string>
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="photos_count">%1$d items</string>
+    <string name="search_no_results">No matches found</string>
+    <string name="search_local_hint">Search stays on this device</string>
+    <string name="viewer_coming_soon">Photo viewer is the next milestone.</string>
+    <string name="feature_coming_soon">This feature will arrive in a later milestone.</string>
+</resources>
