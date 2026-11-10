@@ -1,26 +1,38 @@
 package com.angllary.app.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Collections
+import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,15 +41,25 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.angllary.app.R
 import com.angllary.app.model.MediaItem
 import com.angllary.app.ui.components.MediaGrid
+
+/* ══════════════════════════════════════════════════════════════════
+   Gallery Screen
+   ══════════════════════════════════════════════════════════════════ */
 
 @Composable
 fun GalleryScreen(
@@ -51,13 +73,17 @@ fun GalleryScreen(
     modifier: Modifier = Modifier
 ) {
     val gridState = rememberLazyStaggeredGridState()
+
     Box(modifier = modifier.fillMaxSize()) {
         when {
             !hasPermission -> PermissionState(onClick = onRequestPermission)
-            isLoading -> CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center),
-                color = MaterialTheme.colorScheme.primary
-            )
+            isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.primary,
+                    strokeWidth = 2.5.dp,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
             media.isEmpty() -> EmptyLibraryState()
             else -> MediaGrid(
                 media = media,
@@ -70,65 +96,110 @@ fun GalleryScreen(
     }
 }
 
+/* ── Permission State ────────────────────────────────────────── */
+
 @Composable
 private fun PermissionState(onClick: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 34.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
-            Icon(
-                imageVector = Icons.Outlined.PhotoLibrary,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(20.dp).size(38.dp)
-            )
+        // Icon
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.size(72.dp)
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Outlined.PhotoLibrary,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
         }
-        Spacer(Modifier.height(24.dp))
+
+        Spacer(Modifier.height(28.dp))
+
         Text(
             stringResource(R.string.library_permission_title),
             style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onBackground
         )
+
         Spacer(Modifier.height(10.dp))
+
         Text(
             text = stringResource(R.string.library_permission_body),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            lineHeight = 22.sp
         )
-        Spacer(Modifier.height(22.dp))
-        Button(onClick = onClick, shape = CircleShape) {
-            Icon(Icons.Outlined.Collections, contentDescription = null)
-            Text(stringResource(R.string.allow_photo_access), modifier = Modifier.padding(start = 8.dp))
+
+        Spacer(Modifier.height(28.dp))
+
+        Button(
+            onClick = onClick,
+            shape = RoundedCornerShape(24.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
+            contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)
+        ) {
+            Icon(
+                Icons.Rounded.LockOpen,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                stringResource(R.string.allow_photo_access),
+                style = MaterialTheme.typography.labelLarge
+            )
         }
-        Spacer(Modifier.height(14.dp))
+
+        Spacer(Modifier.height(18.dp))
+
         Text(
             stringResource(R.string.local_first_note),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             textAlign = TextAlign.Center
         )
     }
 }
 
+/* ── Empty Library State ─────────────────────────────────────── */
+
 @Composable
 private fun EmptyLibraryState() {
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 34.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
             imageVector = Icons.Outlined.PhotoLibrary,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(54.dp)
+            tint = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.size(48.dp)
         )
-        Spacer(Modifier.height(18.dp))
-        Text(stringResource(R.string.empty_library_title), style = MaterialTheme.typography.titleLarge)
-        Spacer(Modifier.height(7.dp))
+        Spacer(Modifier.height(20.dp))
+        Text(
+            stringResource(R.string.empty_library_title),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.empty_library_body),
             style = MaterialTheme.typography.bodyMedium,
@@ -137,6 +208,10 @@ private fun EmptyLibraryState() {
         )
     }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   Albums Screen
+   ══════════════════════════════════════════════════════════════════ */
 
 private data class AlbumGroup(val name: String, val items: List<MediaItem>)
 
@@ -151,142 +226,126 @@ fun AlbumsScreen(
         .map { (name, items) -> AlbumGroup(name, items) }
         .sortedByDescending { it.items.size }
 
-    LazyColumn(
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
         modifier = modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(
-            start = 20.dp, end = 20.dp, top = 12.dp, bottom = 24.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text("Albums", style = MaterialTheme.typography.headlineMedium)
+        // Header
+        item(span = { GridItemSpan(2) }) {
+            Column(
+                modifier = Modifier.padding(bottom = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
-                    if (hasPermission) "Your folders, together in one place."
-                    else "Allow media access to discover albums on this device.",
+                    stringResource(R.string.tab_albums),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    if (hasPermission) "Your folders, all in one place."
+                    else "Allow media access to discover albums.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-        item {
-            Surface(
-                shape = RoundedCornerShape(22.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.13f)
-                    ) {
-                        Icon(
-                            Icons.Outlined.AutoAwesome,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(11.dp)
-                        )
-                    }
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text(stringResource(R.string.smart_albums), style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            stringResource(R.string.smart_albums_pending),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+
+        // Section label
+        if (hasPermission && groups.isNotEmpty()) {
+            item(span = { GridItemSpan(2) }) {
+                Text(
+                    stringResource(R.string.device_albums),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
         }
-        item {
-            Text(stringResource(R.string.device_albums), style = MaterialTheme.typography.titleLarge)
-        }
+
         if (!hasPermission || groups.isEmpty()) {
-            item {
+            item(span = { GridItemSpan(2) }) {
                 Text(
                     stringResource(R.string.no_albums),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
         } else {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    groups.take(2).forEach { group ->
-                        FeaturedAlbumCard(group = group, modifier = Modifier.weight(1f))
-                    }
-                }
-            }
-            items(groups.drop(2), key = { it.name }) { group ->
-                CompactAlbumRow(group)
+            items(groups, key = { it.name }) { group ->
+                AlbumCard(group = group)
             }
         }
     }
 }
 
 @Composable
-private fun FeaturedAlbumCard(group: AlbumGroup, modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.fillMaxWidth().height(150.dp)
-        ) {
-            AsyncImage(
-                model = group.items.firstOrNull()?.uri,
-                contentDescription = group.name,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-        }
-        Spacer(Modifier.height(9.dp))
-        Text(group.name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
-        Text(
-            stringResource(R.string.photos_count, group.items.size),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun CompactAlbumRow(group: AlbumGroup) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(13.dp)
+private fun AlbumCard(group: AlbumGroup, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.height(58.dp).weight(0.22f)
+        // Cover image
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(16.dp))
         ) {
-            AsyncImage(
-                model = group.items.firstOrNull()?.uri,
-                contentDescription = group.name,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                AsyncImage(
+                    model = group.items.firstOrNull()?.uri,
+                    contentDescription = group.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            // Gradient overlay at bottom
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .align(Alignment.BottomCenter)
+                    .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.45f))
+                        )
+                    )
             )
+
+            // Item count badge
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = Color.Black.copy(alpha = 0.5f),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(8.dp)
+            ) {
+                Text(
+                    text = "${group.items.size}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                )
+            }
         }
-        Column(
-            modifier = Modifier.weight(0.78f),
-            verticalArrangement = Arrangement.spacedBy(3.dp)
-        ) {
-            Text(group.name, style = MaterialTheme.typography.titleMedium)
-            Text(
-                stringResource(R.string.photos_count, group.items.size),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Icon(
-            Icons.Outlined.Folder,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+
+        // Album name
+        Text(
+            text = group.name,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 2.dp)
         )
     }
 }

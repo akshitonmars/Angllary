@@ -11,14 +11,14 @@
     <string name="locked_folder">Locked Folder</string>
     <string name="recently_deleted">Recently Deleted</string>
     <string name="allow_photo_access">Allow photo access</string>
-    <string name="library_permission_title">Your library, beautifully simple</string>
-    <string name="library_permission_body">Angllary needs access to the photos and videos you choose to show here. Your media stays on this device.</string>
-    <string name="local_first_note">No account. No automatic uploads. Just your library.</string>
+    <string name="library_permission_title">Your gallery,\nbeautifully simple</string>
+    <string name="library_permission_body">Angllary needs access to the photos and videos on this device. Everything stays local — no cloud, no uploads.</string>
+    <string name="local_first_note">No account required. Your library, your device.</string>
     <string name="empty_library_title">Nothing here yet</string>
     <string name="empty_library_body">Photos and videos on this device will appear here.</string>
     <string name="smart_albums">Smart Albums</string>
     <string name="smart_albums_pending">Smart Albums will appear as on-device analysis becomes available.</string>
-    <string name="device_albums">Albums on this device</string>
+    <string name="device_albums">On this device</string>
     <string name="no_albums">No albums found yet</string>
     <string name="cancel">Cancel</string>
     <string name="newest_first">Newest first</string>
@@ -31,11 +31,11 @@
     <string name="photos_count">%1$d items</string>
     <string name="search_no_results">No matches found</string>
     <string name="search_local_hint">Search stays on this device</string>
-    <string name="viewer_details">Media details</string>
+    <string name="viewer_details">Details</string>
     <string name="viewer_file">File</string>
     <string name="viewer_date">Date</string>
     <string name="viewer_resolution">Resolution</string>
     <string name="viewer_album">Album</string>
     <string name="viewer_type">Type</string>
-    <string name="feature_coming_soon">This feature will arrive in a later milestone.</string>
+    <string name="feature_coming_soon">Coming in a future update.</string>
 </resources>

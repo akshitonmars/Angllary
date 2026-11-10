@@ -7,6 +7,12 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +27,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -91,8 +98,16 @@ fun AngllaryApp(repository: MediaStoreRepository) {
         }
     }
 
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        Column(Modifier.fillMaxSize().statusBarsPadding()) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+        ) {
             AngllaryTopBar(
                 dateLabel = dateLabel,
                 onSort = { showSortDialog = true },
@@ -101,22 +116,33 @@ fun AngllaryApp(repository: MediaStoreRepository) {
                 onTrash = { toastFeature(context) },
                 onSettings = { toastFeature(context) }
             )
+
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                when (selectedTab) {
-                    MainTab.ALL -> GalleryScreen(
-                        media = orderedMedia,
-                        hasPermission = hasPermission,
-                        isLoading = isLoading,
-                        minCellSize = gridMode.minCellSize,
-                        onRequestPermission = { permissionLauncher.launch(mediaPermissions()) },
-                        onDateChanged = { dateLabel = formatDateLabel(it.dateModifiedMillis, context) },
-                        onMediaClick = { clicked ->
-                            viewerIndex = orderedMedia.indexOfFirst { it.id == clicked.id }.takeIf { it >= 0 }
-                        }
-                    )
-                    MainTab.ALBUMS -> AlbumsScreen(media = orderedMedia, hasPermission = hasPermission)
+                AnimatedContent(
+                    targetState = selectedTab,
+                    transitionSpec = {
+                        fadeIn(spring(stiffness = Spring.StiffnessMedium)) togetherWith
+                            fadeOut(spring(stiffness = Spring.StiffnessHigh))
+                    },
+                    label = "tabContent"
+                ) { tab ->
+                    when (tab) {
+                        MainTab.ALL -> GalleryScreen(
+                            media = orderedMedia,
+                            hasPermission = hasPermission,
+                            isLoading = isLoading,
+                            minCellSize = gridMode.minCellSize,
+                            onRequestPermission = { permissionLauncher.launch(mediaPermissions()) },
+                            onDateChanged = { dateLabel = formatDateLabel(it.dateModifiedMillis, context) },
+                            onMediaClick = { clicked ->
+                                viewerIndex = orderedMedia.indexOfFirst { it.id == clicked.id }.takeIf { it >= 0 }
+                            }
+                        )
+                        MainTab.ALBUMS -> AlbumsScreen(media = orderedMedia, hasPermission = hasPermission)
+                    }
                 }
             }
+
             AngllaryBottomBar(
                 selectedTab = selectedTab,
                 onTabSelected = { selectedTab = it },
@@ -132,7 +158,7 @@ fun AngllaryApp(repository: MediaStoreRepository) {
 
     if (showSortDialog) {
         ChoiceDialog(
-            title = "Sort media",
+            title = stringResource(R.string.sort),
             options = listOf(
                 stringResource(R.string.newest_first) to (sortMode == SortMode.NEWEST),
                 stringResource(R.string.oldest_first) to (sortMode == SortMode.OLDEST)
@@ -147,7 +173,7 @@ fun AngllaryApp(repository: MediaStoreRepository) {
 
     if (showGridDialog) {
         ChoiceDialog(
-            title = "Grid view",
+            title = stringResource(R.string.grid),
             options = listOf(
                 stringResource(R.string.day) to (gridMode == GridMode.DAY),
                 stringResource(R.string.month) to (gridMode == GridMode.MONTH),
@@ -162,30 +188,57 @@ fun AngllaryApp(repository: MediaStoreRepository) {
     }
 }
 
+/* ── Choice Dialog ───────────────────────────────────────────── */
+
 @Composable
-private fun ChoiceDialog(title: String, options: List<Pair<String, Boolean>>, onSelect: (Int) -> Unit, onDismiss: () -> Unit) {
+private fun ChoiceDialog(
+    title: String,
+    options: List<Pair<String, Boolean>>,
+    onSelect: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, style = MaterialTheme.typography.titleLarge) },
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
         text = {
             Column {
                 options.forEachIndexed { index, option ->
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        RadioButton(selected = option.second, onClick = { onSelect(index) })
+                        RadioButton(
+                            selected = option.second,
+                            onClick = { onSelect(index) },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
                         Text(option.first, color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
         },
         confirmButton = {
-            OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            OutlinedButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
         }
     )
 }
+
+/* ── Utility functions ───────────────────────────────────────── */
 
 private fun mediaPermissions(): Array<String> = when {
     Build.VERSION.SDK_INT >= 34 -> arrayOf(
@@ -201,12 +254,14 @@ private fun mediaPermissions(): Array<String> = when {
 }
 
 private fun hasMediaAccess(context: Context): Boolean {
-    fun granted(permission: String) = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+    fun granted(permission: String) =
+        ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
     return when {
         Build.VERSION.SDK_INT >= 34 -> granted(Manifest.permission.READ_MEDIA_IMAGES) ||
             granted(Manifest.permission.READ_MEDIA_VIDEO) ||
             granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
-        Build.VERSION.SDK_INT >= 33 -> granted(Manifest.permission.READ_MEDIA_IMAGES) || granted(Manifest.permission.READ_MEDIA_VIDEO)
+        Build.VERSION.SDK_INT >= 33 -> granted(Manifest.permission.READ_MEDIA_IMAGES) ||
+            granted(Manifest.permission.READ_MEDIA_VIDEO)
         else -> granted(Manifest.permission.READ_EXTERNAL_STORAGE)
     }
 }
