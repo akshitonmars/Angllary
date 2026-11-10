@@ -27,7 +27,7 @@ private object Palette {
     val DividerDark = Color(0xFF353535)
 }
 
-// Uses Google Sans when it is installed on the device, with Android sans-serif fallback.
+// Google Sans Flex is loaded through Android's downloadable-font provider; Android sans-serif is the fallback.
 private val GoogleSans = FontFamily(Font(com.angllary.app.R.font.google_sans_flex))
 
 private val AngllaryTypography = Typography().let { base ->
