@@ -1,18 +1,20 @@
-name: Android build
+name: Android build and GitHub Release
 
 on:
   push:
     branches: [ main ]
+    tags:
+      - "v*"
   pull_request:
     branches: [ main ]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   debug-apk:
-    name: Build debug APK
+    name: Build Android APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,10 +39,11 @@ jobs:
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - name: Publish APK to GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
         with:
-          name: angllary-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 14
+          name: Angllary ${{ github.ref_name }}
+          generate_release_notes: true
+          files: app/build/outputs/apk/debug/app-debug.apk
+          fail_on_unmatched_files: true
