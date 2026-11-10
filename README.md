@@ -4,42 +4,50 @@
 
 Angllary is a native, local-first Android gallery focused on a calm visual experience, fast media browsing, thoughtful organisation, and privacy.
 
-> This repository is in its foundation stage. The first milestone establishes the Android application, design system, gallery shell, and reproducible cloud debug builds. Features are added incrementally; unfinished features are not represented as production-ready.
-
 ## Product principles
 
-- **Local-first:** the gallery works without an account or a cloud service.
+- **Local-first:** the gallery works without an account or cloud service.
 - **Private by default:** media stays on the device unless a future feature explicitly asks for permission.
-- **Fast:** browsing must not wait for background indexing or AI.
-- **Quiet design:** media is the focus; controls stay compact and predictable.
+- **Fast:** browsing does not wait for background indexing or AI.
+- **Quiet design:** near-black and off-white surfaces, compact controls, and no decorative colour.
 - **Open source:** the project is developed in public.
 
 ## Technology
 
 - Kotlin
 - Native Android + Jetpack Compose
-- Material 3, with a custom Angllary design system
+- Material 3 with a monochrome Angllary design system
 - Android MediaStore for device media
-- Coil for efficient media thumbnails
-- GitHub Actions for debug APK builds
+- Coil for efficient image thumbnails
+- GitHub Actions for reproducible APK builds and GitHub Releases distribution
 
-## Build
+## Milestones
 
-The repository includes a GitHub Actions workflow that builds a debug APK on pushes to `main`.
+### Milestone 1 — App foundation
+- [x] Android project, navigation shell, design system, and adaptive launcher icon
+- [x] Media permission onboarding and local MediaStore query
+- [x] All / Albums gallery shell, sorting, and grid density controls
+- [x] GitHub Actions build pipeline
 
-The generated APK is published as a workflow artifact named `angllary-debug-apk`.
+### Milestone 2 — Media viewing
+- [x] Full-screen image viewer with pinch-to-zoom
+- [x] In-app video playback with Android playback controls
+- [x] Previous / next media navigation
+- [x] Share media through Android Sharesheet
+- [x] Media details panel with file, date, resolution, album, and MIME type
+- [x] Monochrome UI refresh and updated app icon
 
-For a local Android Studio build, open the repository as a Gradle project and run the `assembleDebug` task.
-
-## Project status
-
-- [x] Initial Android project and design-system foundation
-- [x] Gallery shell and All / Albums navigation
-- [ ] Full MediaStore permission and library indexing
-- [ ] Photo viewer and video playback
+### Later milestones
 - [ ] Search and album management
 - [ ] Locked Folder and Recently Deleted
-- [ ] Editors and on-device AI
+- [ ] Photo and video editing
+- [ ] Optional on-device AI organisation and search
+
+## Build and releases
+
+Every push to main runs the Android debug build. To publish an APK, create and push a version tag such as v0.2.0; the release workflow builds the APK and attaches it to the matching GitHub Release.
+
+For a local Android Studio build, open the repository as a Gradle project and run the assembleDebug task.
 
 ## Contributing
 
