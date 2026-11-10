@@ -6,7 +6,8 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightNavigationBar">false</item>
-        <item name="android:colorAccent">#E59A78</item>
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:colorAccent">#F1F1EF</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
 </resources>
