@@ -1,61 +1,62 @@
 # Angllary design system
 
-This document records the first implementation direction. Colours and spacing are foundational defaults and can be refined as the visual identity matures.
-
 ## Product feel
 
-- Minimal, calm, media-first.
+- Minimal, quiet, media-first.
 - Photos occupy the majority of the screen.
-- Controls are compact, rounded and predictable.
-- No ads, account prompts, social feed, or decorative clutter.
+- Controls are compact, consistently aligned, and predictable.
+- No ads, account prompts, social feed, decorative tints, or accent colours.
 - Light and dark themes follow the Android system setting.
 
-## Brand and language
+## Brand and typography
 
 - Name: Angllary.
 - Working tagline: Your photos. Your space.
 - Initial interface language: English.
-- User-facing text is kept in Android string resources so translations can be added without changing UI code.
+- Google Sans is requested as the UI typeface and is used when the Android system exposes it; Android sans-serif is the runtime fallback.
+- User-facing strings live in Android resources to support future localization.
 
-## Colour tokens
+## Monochrome colour tokens
 
 | Token | Light | Dark |
 |---|---|---|
-| Canvas | #F6F5F2 | #121311 |
-| Surface | #FFFFFF | #1C1E1B |
-| Primary text | #20211F | #F3F1EC |
-| Secondary text | #85847F | #A5A39C |
-| Accent | #C86F4A | #E59A78 |
-| Soft accent | #F3E3DA | #3B2A23 |
+| Canvas | #F2F2F0 | #111111 |
+| Surface | #FAFAF8 | #1A1A1A |
+| Secondary surface | #E8E8E6 | #252525 |
+| Primary text | #191919 | #F1F1EF |
+| Secondary text | #747474 | #A5A5A5 |
+| Divider | #D9D9D6 | #353535 |
+
+There are no hue-based accent colours. The top and bottom edge fades are monochrome and intentionally subtle.
 
 ## Shapes and spacing
 
-- Pills: fully rounded.
-- Media thumbnails: approximately 18–20dp corner radius.
-- Cards: 20–22dp corner radius.
+- Navigation: one compact capsule aligned to the lower-right, with a separate inactive Search control on the lower-left.
+- No full-width solid navigation shelf.
 - Main horizontal inset: 20dp.
-- Gallery grid gap: 9dp.
-- Avoid persistent borders; use tonal surfaces and subtle outlines only where needed.
+- Gallery grid inset: 5dp.
+- Gallery thumbnail gap: 4dp.
+- Media thumbnails use a medium rounded shape; no persistent outline.
+- Keep all header controls vertically centred and the date indicator centred to the screen.
 
 ## Main gallery
 
-- Brand pill at top-left.
-- Scroll-aware date indicator in the top centre; display-only and not tappable.
-- Overflow menu at top-right.
-- Adaptive masonry-inspired media grid with varied thumbnail aspect ratios.
-- Separate circular Search control at bottom-left.
-- Two-destination pill navigation: All and Albums.
+- Brand at top-left, non-interactive date indicator centred, overflow menu at top-right.
+- Adaptive staggered media grid with image dimensions respected.
+- Search control is visible but intentionally inactive until its milestone.
+- Bottom navigation contains only All and Albums.
 
-## Albums
+## Milestone 2 viewer
 
-- Mixed album presentation.
-- Larger cover cards for featured folders.
-- Compact rows for the rest.
-- Smart Albums will be populated when on-device analysis is implemented.
+- Full-screen image and video presentation.
+- Pinch-to-zoom for still images.
+- Android video playback controls for videos.
+- Previous / next media navigation, sharing, and a details panel.
+- Details show only fields available from MediaStore.
 
 ## Accessibility
 
-- Touch targets should be at least 48dp.
-- Content descriptions for meaningful icons and media thumbnails.
-- Text remains readable with system font scaling.
-- Use system light/dark mode and respect reduced-motion preferences as animation is introduced.
+- Touch targets remain at least 48dp where practical.
+- Meaningful icons have content descriptions.
+- Text follows system font scaling.
+- Reduced-motion preferences will be respected as animation is introduced.
