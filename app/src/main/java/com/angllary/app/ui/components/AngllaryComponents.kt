@@ -98,6 +98,17 @@ fun AngllaryTopBar(
     var menuExpanded by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
     val haptic = rememberHapticClick { menuExpanded = true }
+    val sortClick = rememberHapticClick { onSort() }
+    val gridClick = rememberHapticClick { onGrid() }
+    val favoritesClick = rememberHapticClick { onFavorites() }
+    val lockedClick = rememberHapticClick { onLockedFolder() }
+    val trashClick = rememberHapticClick { onTrash() }
+    val settingsClick = rememberHapticClick { onSettings() }
+    val menuRotation by animateFloatAsState(
+        targetValue = if (menuExpanded) 90f else 0f,
+        animationSpec = spring(stiffness = 520f, dampingRatio = 0.78f),
+        label = "menuIconRotation"
+    )
 
     Row(
         modifier = modifier
@@ -141,7 +152,7 @@ fun AngllaryTopBar(
                     Icons.Outlined.MoreHoriz,
                     contentDescription = stringResource(R.string.open_menu),
                     tint = colors.onSurface,
-                    modifier = Modifier.size(23.dp)
+                    modifier = Modifier.size(23.dp).graphicsLayer { rotationZ = menuRotation }
                 )
             }
             DropdownMenu(
@@ -151,32 +162,32 @@ fun AngllaryTopBar(
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.sort)) },
                     leadingIcon = { Icon(Icons.Outlined.Sort, contentDescription = null) },
-                    onClick = { menuExpanded = false; onSort() }
+                    onClick = { menuExpanded = false; sortClick() }
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.grid)) },
                     leadingIcon = { Icon(Icons.Outlined.GridView, contentDescription = null) },
-                    onClick = { menuExpanded = false; onGrid() }
+                    onClick = { menuExpanded = false; gridClick() }
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.favorites)) },
                     leadingIcon = { Icon(Icons.Outlined.Star, contentDescription = null) },
-                    onClick = { menuExpanded = false; onFavorites() }
+                    onClick = { menuExpanded = false; favoritesClick() }
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.locked_folder)) },
                     leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
-                    onClick = { menuExpanded = false; onLockedFolder() }
+                    onClick = { menuExpanded = false; lockedClick() }
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.recently_deleted)) },
                     leadingIcon = { Icon(Icons.Outlined.DeleteOutline, contentDescription = null) },
-                    onClick = { menuExpanded = false; onTrash() }
+                    onClick = { menuExpanded = false; trashClick() }
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.settings)) },
                     leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
-                    onClick = { menuExpanded = false; onSettings() }
+                    onClick = { menuExpanded = false; settingsClick() }
                 )
             }
         }
