@@ -3,6 +3,11 @@ package com.angllary.app.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -65,6 +71,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -79,6 +86,7 @@ import com.angllary.app.data.LockedFolderStore
 import com.angllary.app.model.CustomAlbum
 import com.angllary.app.model.MediaItem
 import com.angllary.app.ui.components.MediaThumbnail
+import com.angllary.app.ui.components.rememberHapticClick
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -107,13 +115,7 @@ fun GalleryScreen(
     Box(modifier.fillMaxSize()) {
         when {
             !hasPermission -> PermissionState(onRequestPermission)
-            isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(28.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
+            isLoading -> GalleryLoadingGrid()
             media.isEmpty() -> EmptyState(
                 title = stringResource(R.string.empty_library_title),
                 body = stringResource(R.string.empty_library_body),
@@ -287,11 +289,11 @@ private fun AlbumCard(
 }
 
 @Composable
-fun SearchOverlay(
+fun SearchScreen(
     media: List<MediaItem>,
     favoriteUris: Set<String>,
     onOpen: (MediaItem) -> Unit,
-    onClose: () -> Unit
+    modifier: Modifier = Modifier
 ) {
     var query by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf("all") }
@@ -314,85 +316,189 @@ fun SearchOverlay(
                     item.mimeType.contains(normalized, true) ||
                     formatSearchDate(item.displayDateMillis).contains(normalized, true)
             }
-            .take(300)
+            .take(500)
             .toList()
     }
 
-    androidx.compose.ui.window.Dialog(onDismissRequest = onClose) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().heightIn(max = 680.dp),
-            shape = RoundedCornerShape(26.dp),
-            color = MaterialTheme.colorScheme.surface
-        ) {
-            Column(Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        placeholder = { Text(stringResource(R.string.search_photos)) },
-                        shape = CircleShape
-                    )
-                    TextButton(onClick = onClose) { Text(stringResource(R.string.close)) }
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.padding(top = 12.dp, bottom = 12.dp)) {
-                    listOf("all" to stringResource(R.string.all), "photos" to stringResource(R.string.photos), "videos" to stringResource(R.string.videos), "favorites" to stringResource(R.string.favorites)).forEach { (key, label) ->
-                        FilterChip(selected = filter == key, onClick = { filter = key }, label = { Text(label) })
+    Column(
+        modifier = modifier.fillMaxSize().padding(horizontal = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            leadingIcon = {
+                Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            },
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = rememberHapticClick { query = "" }) {
+                        Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.clear_search))
                     }
                 }
+            },
+            placeholder = { Text(stringResource(R.string.search_photos)) }
+        )
 
-                if (normalized.isBlank()) {
-                    Text(
-                        stringResource(R.string.search_hint),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
-                    )
-                }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            listOf(
+                "all" to stringResource(R.string.all),
+                "photos" to stringResource(R.string.photos),
+                "videos" to stringResource(R.string.videos),
+                "favorites" to stringResource(R.string.favorites)
+            ).forEach { (key, label) ->
+                SearchFilter(
+                    label = label,
+                    selected = filter == key,
+                    onClick = { filter = key },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
 
-                if (results.isEmpty()) {
-                    EmptyState(
-                        title = stringResource(R.string.no_search_results),
-                        body = stringResource(R.string.no_search_results_body),
-                        icon = { Icon(Icons.Outlined.Search, contentDescription = null, modifier = Modifier.size(26.dp)) },
-                        modifier = Modifier.weight(1f)
-                    )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+        if (normalized.isBlank()) {
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(
+                    stringResource(R.string.search_on_device_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    stringResource(R.string.search_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            Text(
+                stringResource(R.string.search_result_count, results.size),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        if (results.isEmpty()) {
+            EmptyState(
+                title = if (normalized.isBlank()) stringResource(R.string.no_media_for_filter) else stringResource(R.string.no_search_results),
+                body = stringResource(R.string.no_search_results_body),
+                icon = { Icon(Icons.Outlined.Search, contentDescription = null, modifier = Modifier.size(26.dp)) },
+                modifier = Modifier.weight(1f)
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(results, key = { it.uri.toString() }) { item ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable(onClick = rememberHapticClick { onOpen(item) })
+                            .padding(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(results, key = { it.uri.toString() }) { item ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-                                    .clickable { onOpen(item) }.padding(6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                MediaThumbnail(
-                                    item = item,
-                                    modifier = Modifier.size(58.dp).clip(RoundedCornerShape(10.dp)),
-                                    contentScale = ContentScale.Crop
-                                )
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(item.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(
-                                        listOf(item.albumName, formatSearchDate(item.displayDateMillis), if (item.isVideo) stringResource(R.string.video) else stringResource(R.string.photo)).filter { it.isNotBlank() }.joinToString(" · "),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                Icon(Icons.Outlined.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                            }
+                        MediaThumbnail(
+                            item = item,
+                            modifier = Modifier.size(68.dp).clip(RoundedCornerShape(11.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text(
+                                item.displayName,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                listOf(
+                                    item.albumName,
+                                    formatSearchDate(item.displayDateMillis),
+                                    if (item.isVideo) stringResource(R.string.video) else stringResource(R.string.photo)
+                                ).filter { it.isNotBlank() }.joinToString(" · "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
+                        Icon(
+                            Icons.AutoMirrored.Outlined.ArrowForward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(17.dp)
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SearchFilter(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scheme = MaterialTheme.colorScheme
+    val background = if (selected) scheme.onSurface else scheme.surface
+    val foreground = if (selected) scheme.surface else scheme.onSurfaceVariant
+    Box(
+        modifier = modifier.height(40.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(background)
+            .clickable(onClick = rememberHapticClick(onClick)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            label,
+            color = foreground,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun GalleryLoadingGrid() {
+    val transition = rememberInfiniteTransition(label = "gallerySkeleton")
+    val alpha by transition.animateFloat(
+        initialValue = 0.38f,
+        targetValue = 0.78f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "skeletonOpacity"
+    )
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 5.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        items(12) { index ->
+            val height = if (index % 3 == 0) 230.dp else if (index % 3 == 1) 170.dp else 195.dp
+            Box(
+                Modifier.fillMaxWidth().height(height)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha))
+            )
         }
     }
 }
