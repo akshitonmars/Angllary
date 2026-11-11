@@ -8,8 +8,23 @@ data class MediaItem(
     val displayName: String,
     val mimeType: String,
     val dateModifiedMillis: Long,
+    val dateTakenMillis: Long,
     val width: Int,
     val height: Int,
     val albumName: String,
-    val isVideo: Boolean
+    val bucketId: String,
+    val relativePath: String,
+    val sizeBytes: Long,
+    val durationMillis: Long,
+    val isVideo: Boolean,
+    val isLocked: Boolean = false
+) {
+    val displayDateMillis: Long
+        get() = dateTakenMillis.takeIf { it > 0L } ?: dateModifiedMillis
+}
+
+data class CustomAlbum(
+    val id: String,
+    val name: String,
+    val mediaUris: Set<String>
 )
