@@ -40,6 +40,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.MaterialTheme
@@ -386,9 +387,12 @@ fun AngllaryApp(
         }
     }
 
-    Box(
-        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalContentColor provides MaterialTheme.colorScheme.onBackground
     ) {
+        Box(
+            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+        ) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             AnimatedContent(
                 targetState = activePage,
@@ -638,6 +642,7 @@ fun AngllaryApp(
                 onSearch = { activePage = AppPage.SEARCH }
             )
         }
+    }
     }
 
     val currentViewerIndex = viewerIndex
