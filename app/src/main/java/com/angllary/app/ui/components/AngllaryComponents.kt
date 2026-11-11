@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
@@ -75,6 +74,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -113,6 +114,12 @@ fun AngllaryTopBar(
     var menuExpanded by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
     val haptic = rememberHapticClick { menuExpanded = true }
+    val sortClick = rememberHapticClick(onSort)
+    val gridClick = rememberHapticClick(onGrid)
+    val favoritesClick = rememberHapticClick(onFavorites)
+    val lockedClick = rememberHapticClick(onLockedFolder)
+    val trashClick = rememberHapticClick(onTrash)
+    val settingsClick = rememberHapticClick(onSettings)
     val sideMargin by animateDpAsState(if (isScrolled) 13.dp else 0.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerMargin")
     val topMargin by animateDpAsState(if (isScrolled) 7.dp else 0.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerTopMargin")
     val rowHeight by animateDpAsState(if (isScrolled) 58.dp else 66.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerHeight")
@@ -205,32 +212,32 @@ fun AngllaryTopBar(
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.sort)) },
                             leadingIcon = { Icon(Icons.Outlined.Sort, contentDescription = null) },
-                            onClick = { menuExpanded = false; rememberHapticClick(onSort)() }
+                            onClick = { menuExpanded = false; sortClick() }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.grid)) },
                             leadingIcon = { Icon(Icons.Outlined.GridView, contentDescription = null) },
-                            onClick = { menuExpanded = false; rememberHapticClick(onGrid)() }
+                            onClick = { menuExpanded = false; gridClick() }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.favorites)) },
                             leadingIcon = { Icon(Icons.Outlined.Star, contentDescription = null) },
-                            onClick = { menuExpanded = false; rememberHapticClick(onFavorites)() }
+                            onClick = { menuExpanded = false; favoritesClick() }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.locked_folder)) },
                             leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
-                            onClick = { menuExpanded = false; rememberHapticClick(onLockedFolder)() }
+                            onClick = { menuExpanded = false; lockedClick() }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.recently_deleted)) },
                             leadingIcon = { Icon(Icons.Outlined.DeleteOutline, contentDescription = null) },
-                            onClick = { menuExpanded = false; rememberHapticClick(onTrash)() }
+                            onClick = { menuExpanded = false; trashClick() }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.settings)) },
                             leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
-                            onClick = { menuExpanded = false; rememberHapticClick(onSettings)() }
+                            onClick = { menuExpanded = false; settingsClick() }
                         )
                     }
                 }
@@ -383,6 +390,7 @@ fun MediaGrid(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val localView = LocalView.current
     var focusedItem by remember { mutableStateOf<MediaItem?>(null) }
     var focusedMenuExpanded by remember { mutableStateOf(false) }
     val blurRadius by animateDpAsState(
@@ -434,7 +442,7 @@ fun MediaGrid(
                         indication = null,
                         onClick = rememberHapticClick { onMediaClick(item) },
                         onLongClick = {
-                            LocalViewHaptics.perform(context)
+                            localView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                             focusedItem = item
                             focusedMenuExpanded = false
                         }
@@ -633,13 +641,6 @@ fun MediaGrid(
                 }
             }
         }
-    }
-}
-
-private object LocalViewHaptics {
-    fun perform(context: android.content.Context) {
-        val view = (context as? android.app.Activity)?.window?.decorView
-        view?.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
     }
 }
 
