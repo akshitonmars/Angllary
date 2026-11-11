@@ -5,6 +5,10 @@
     <string name="tab_albums">Albums</string>
     <string name="search">Search</string>
     <string name="search_photos">Search your photos</string>
+    <string name="search_on_device_title">Search on this device</string>
+    <string name="search_result_count">%1$d results</string>
+    <string name="clear_search">Clear search</string>
+    <string name="no_media_for_filter">No media in this filter</string>
     <string name="sort">Sort order</string>
     <string name="grid">Grid density</string>
     <string name="settings">Settings</string>
