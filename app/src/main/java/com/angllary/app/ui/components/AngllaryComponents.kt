@@ -270,9 +270,8 @@ fun MediaGrid(
                     .clip(RoundedCornerShape(12.dp))
                     .clickable { onMediaClick(item) }
             ) {
-                AsyncImage(
-                    model = item.uri,
-                    contentDescription = item.displayName,
+                MediaThumbnail(
+                    item = item,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
