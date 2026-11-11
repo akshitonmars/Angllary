@@ -138,4 +138,8 @@
     <string name="video_editor_note">The video is re-encoded to a new MP4 copy. The original clip remains unchanged.</string>
     <string name="video_export_success">Trimmed video saved as a new copy.</string>
     <string name="feature_coming_soon">Coming in a future update.</string>
+    <string name="about_title">About Angllary</string>
+    <string name="library_stats">Library statistics</string>
+    <string name="stats_summary">%1$d items (%2$d photos, %3$d videos)</string>
+    <string name="app_version_label">Version %1$s</string>
 </resources>

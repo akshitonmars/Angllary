@@ -16,6 +16,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -35,6 +36,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.DeleteOutline
@@ -127,6 +129,15 @@ fun MediaViewer(
     var viewerVisible by remember { mutableStateOf(false) }
     var closeRequested by remember { mutableStateOf(false) }
     var imageZoomed by remember { mutableStateOf(false) }
+    var chromeVisible by remember { mutableStateOf(true) }
+
+    val toggleChrome = {
+        if (detailsVisible) {
+            detailsVisible = false
+        } else {
+            chromeVisible = !chromeVisible
+        }
+    }
 
     LaunchedEffect(Unit) { viewerVisible = true }
     LaunchedEffect(pagerState.currentPage) {
@@ -180,9 +191,12 @@ fun MediaViewer(
                 userScrollEnabled = !imageZoomed
             ) { page ->
                 val item = media[page]
+                val isActive = page == pagerState.currentPage
                 if (item.isVideo) {
                     VideoContent(
                         item = item,
+                        isActive = isActive,
+                        onTap = toggleChrome,
                         onSwipePrevious = {
                             if (pagerState.currentPage > 0) {
                                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
@@ -199,26 +213,31 @@ fun MediaViewer(
                 } else {
                     ImageContent(
                         item = item,
-                        onZoomChanged = { imageZoomed = it }
+                        onZoomChanged = { imageZoomed = it },
+                        onTap = toggleChrome
                     )
                 }
             }
 
-            // Top information pill. It remains visible instead of disappearing
-            // after a tap, so the viewer never loses its navigation affordance.
-            Surface(
+            // Top information pill with animated show/hide on tap
+            AnimatedVisibility(
+                visible = chromeVisible,
+                enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { -it },
+                exit = fadeOut(tween(140)) + slideOutVertically(tween(180)) { -it },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
                     .padding(horizontal = 14.dp, vertical = 10.dp)
                     .fillMaxWidth()
-                    .zIndex(3f),
-                shape = RoundedCornerShape(50.dp),
-                color = ext.viewerSurface,
-                contentColor = ext.viewerOnSurface,
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-                shadowElevation = 12.dp
+                    .zIndex(3f)
             ) {
+                Surface(
+                    shape = RoundedCornerShape(50.dp),
+                    color = ext.viewerSurface,
+                    contentColor = ext.viewerOnSurface,
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                    shadowElevation = 12.dp
+                ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -314,7 +333,7 @@ fun MediaViewer(
             }
 
             AnimatedVisibility(
-                visible = detailsVisible,
+                visible = detailsVisible && chromeVisible,
                 enter = fadeIn(tween(160)) + slideInVertically(tween(200)) { it / 5 },
                 exit = fadeOut(tween(120)) + slideOutVertically(tween(160)) { it / 5 },
                 modifier = Modifier
@@ -360,60 +379,65 @@ fun MediaViewer(
                 }
             }
 
-            // Bottom actions are a separate floating pill, above the gesture
-            // navigation inset, with a generous hit target for every action.
-            Surface(
+            // Bottom actions pill with animated show/hide on tap
+            AnimatedVisibility(
+                visible = chromeVisible,
+                enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { it },
+                exit = fadeOut(tween(140)) + slideOutVertically(tween(180)) { it },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
                     .padding(horizontal = 14.dp)
                     .padding(bottom = 12.dp)
                     .fillMaxWidth()
-                    .zIndex(3f),
-                shape = RoundedCornerShape(50.dp),
-                color = ext.viewerSurface,
-                contentColor = ext.viewerOnSurface,
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-                shadowElevation = 16.dp
+                    .zIndex(3f)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(78.dp)
-                        .padding(horizontal = 4.dp, vertical = 3.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    shape = RoundedCornerShape(50.dp),
+                    color = ext.viewerSurface,
+                    contentColor = ext.viewerOnSurface,
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                    shadowElevation = 16.dp
                 ) {
-                    ViewerAction(Icons.Outlined.Share, stringResource(R.string.share)) {
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = currentItem.mimeType.ifBlank {
-                                if (currentItem.isVideo) "video/*" else "image/*"
-                            }
-                            putExtra(Intent.EXTRA_STREAM, currentItem.uri)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        context.startActivity(Intent.createChooser(intent, null))
-                    }
-                    ViewerAction(
-                        if (isFavorite(currentItem)) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
-                        stringResource(R.string.favorite),
-                        active = isFavorite(currentItem)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(78.dp)
+                            .padding(horizontal = 4.dp, vertical = 3.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        onToggleFavorite(currentItem)
-                    }
-                    ViewerAction(Icons.Outlined.Info, stringResource(R.string.details)) {
-                        detailsVisible = !detailsVisible
-                    }
-                    if (!currentItem.isLocked) {
-                        ViewerAction(Icons.Outlined.Edit, stringResource(R.string.edit)) {
-                            if (currentItem.isVideo) onTrimVideo(currentItem) else onEditPhoto(currentItem)
+                        ViewerAction(Icons.Outlined.Share, stringResource(R.string.share)) {
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = currentItem.mimeType.ifBlank {
+                                    if (currentItem.isVideo) "video/*" else "image/*"
+                                }
+                                putExtra(Intent.EXTRA_STREAM, currentItem.uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(intent, null))
                         }
                         ViewerAction(
-                            Icons.Outlined.DeleteOutline,
-                            stringResource(R.string.move_to_trash),
-                            emphasized = true
+                            if (isFavorite(currentItem)) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
+                            stringResource(R.string.favorite),
+                            active = isFavorite(currentItem)
                         ) {
-                            onTrash(currentItem)
+                            onToggleFavorite(currentItem)
+                        }
+                        ViewerAction(Icons.Outlined.Info, stringResource(R.string.details)) {
+                            detailsVisible = !detailsVisible
+                        }
+                        if (!currentItem.isLocked) {
+                            ViewerAction(Icons.Outlined.Edit, stringResource(R.string.edit)) {
+                                if (currentItem.isVideo) onTrimVideo(currentItem) else onEditPhoto(currentItem)
+                            }
+                            ViewerAction(
+                                Icons.Outlined.DeleteOutline,
+                                stringResource(R.string.move_to_trash),
+                                emphasized = true
+                            ) {
+                                onTrash(currentItem)
+                            }
                         }
                     }
                 }
@@ -444,7 +468,8 @@ fun MediaViewer(
 @Composable
 private fun ImageContent(
     item: MediaItem,
-    onZoomChanged: (Boolean) -> Unit
+    onZoomChanged: (Boolean) -> Unit,
+    onTap: () -> Unit
 ) {
     var scale by remember(item.uri) { mutableFloatStateOf(1f) }
     var offset by remember(item.uri) { mutableStateOf(Offset.Zero) }
@@ -455,31 +480,59 @@ private fun ImageContent(
             offset = Offset.Zero
             onZoomChanged(false)
         } else {
-            offset += panChange
+            val maxOffsetX = 1200f * (nextScale - 1f)
+            val maxOffsetY = 1600f * (nextScale - 1f)
+            offset = Offset(
+                x = (offset.x + panChange.x).coerceIn(-maxOffsetX, maxOffsetX),
+                y = (offset.y + panChange.y).coerceIn(-maxOffsetY, maxOffsetY)
+            )
             onZoomChanged(true)
         }
     }
 
-    AsyncImage(
-        model = item.uri,
-        contentDescription = item.displayName,
+    Box(
         modifier = Modifier
             .fillMaxSize()
+            .pointerInput(item.uri) {
+                detectTapGestures(
+                    onTap = { onTap() },
+                    onDoubleTap = {
+                        if (scale > 1.05f) {
+                            scale = 1f
+                            offset = Offset.Zero
+                            onZoomChanged(false)
+                        } else {
+                            scale = 2.5f
+                            onZoomChanged(true)
+                        }
+                    }
+                )
+            }
             .transformable(
                 state = transformState,
                 canPan = { scale > 1.01f }
-            )
-            .scale(scale)
-            .offset {
-                IntOffset(offset.x.roundToInt(), offset.y.roundToInt())
-            },
-        contentScale = androidx.compose.ui.layout.ContentScale.Fit
-    )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        AsyncImage(
+            model = item.uri,
+            contentDescription = item.displayName,
+            modifier = Modifier
+                .fillMaxSize()
+                .scale(scale)
+                .offset {
+                    IntOffset(offset.x.roundToInt(), offset.y.roundToInt())
+                },
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit
+        )
+    }
 }
 
 @Composable
 private fun VideoContent(
     item: MediaItem,
+    isActive: Boolean,
+    onTap: () -> Unit,
     onSwipePrevious: () -> Unit,
     onSwipeNext: () -> Unit
 ) {
@@ -491,6 +544,13 @@ private fun VideoContent(
             playWhenReady = false
         }
     }
+
+    LaunchedEffect(isActive) {
+        if (!isActive) {
+            player.pause()
+        }
+    }
+
     DisposableEffect(player) {
         onDispose { player.release() }
     }
@@ -501,23 +561,31 @@ private fun VideoContent(
             PlayerView(viewContext).apply {
                 var downX = 0f
                 var downY = 0f
+                var downTime = 0L
                 setOnTouchListener { target, event ->
                     when (event.actionMasked) {
                         MotionEvent.ACTION_DOWN -> {
                             downX = event.x
                             downY = event.y
+                            downTime = System.currentTimeMillis()
                             false
                         }
                         MotionEvent.ACTION_UP -> {
                             val deltaX = event.x - downX
                             val deltaY = event.y - downY
+                            val elapsed = System.currentTimeMillis() - downTime
                             val horizontalSwipe =
                                 abs(deltaX) > target.width * 0.14f &&
                                     abs(deltaX) > abs(deltaY) * 1.3f
                             if (horizontalSwipe) {
                                 if (deltaX < 0f) onSwipeNext() else onSwipePrevious()
+                                true
+                            } else if (elapsed < 300 && abs(deltaX) < 30 && abs(deltaY) < 30) {
+                                onTap()
+                                false
+                            } else {
+                                false
                             }
-                            horizontalSwipe
                         }
                         else -> false
                     }

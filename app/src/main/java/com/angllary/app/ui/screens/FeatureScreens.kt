@@ -249,22 +249,23 @@ fun AlbumsScreen(
                 )
             }
         } else {
-            item {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxWidth().height((216f * (groups.size / 2 + groups.size % 2)).dp),
-                    userScrollEnabled = false,
-                    contentPadding = PaddingValues(bottom = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+            items(groups.chunked(2), key = { pair -> pair.joinToString("-") { it.id } }) { rowAlbums ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    gridItems(groups, key = { it.id }) { album ->
-                        AlbumCard(
-                            title = album.name,
-                            count = album.media.size,
-                            cover = album.media.firstOrNull(),
-                            onClick = { onOpenDeviceAlbum(album.id, album.name) }
-                        )
+                    for (album in rowAlbums) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            AlbumCard(
+                                title = album.name,
+                                count = album.media.size,
+                                cover = album.media.firstOrNull(),
+                                onClick = { onOpenDeviceAlbum(album.id, album.name) }
+                            )
+                        }
+                    }
+                    if (rowAlbums.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }
@@ -318,7 +319,7 @@ private fun AlbumCard(
 fun SearchScreen(
     media: List<MediaItem>,
     favoriteUris: Set<String>,
-    onOpen: (MediaItem) -> Unit,
+    onOpen: (MediaItem, List<MediaItem>) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var query by remember { mutableStateOf("") }
@@ -426,7 +427,7 @@ fun SearchScreen(
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
-                            .clickable(onClick = rememberHapticClick { onOpen(item) })
+                            .clickable(onClick = rememberHapticClick { onOpen(item, results) })
                             .padding(6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -700,6 +701,9 @@ fun SettingsScreen(
     themeMode: String,
     gridMode: String,
     sortMode: String,
+    totalMediaCount: Int = 0,
+    photosCount: Int = 0,
+    videosCount: Int = 0,
     onThemeChange: (String) -> Unit,
     onGridChange: (String) -> Unit,
     onSortChange: (String) -> Unit,
@@ -736,8 +740,33 @@ fun SettingsScreen(
                 SettingsChoice(stringResource(R.string.oldest_first), sortMode == "oldest") { onSortChange("oldest") }
             }
         }
+        if (totalMediaCount > 0) {
+            item {
+                SettingsGroup(title = stringResource(R.string.library_stats)) {
+                    Text(
+                        stringResource(R.string.stats_summary, totalMediaCount, photosCount, videosCount),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+            }
+        }
         item {
-            Text(stringResource(R.string.local_privacy_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            SettingsGroup(title = stringResource(R.string.about_title)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(vertical = 4.dp)) {
+                    Text(
+                        stringResource(R.string.app_version_label, "0.5.2"),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        stringResource(R.string.local_privacy_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

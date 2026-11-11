@@ -14,30 +14,34 @@ Angllary is a native Android gallery designed around a quiet monochrome interfac
 - **True neutral palette:** light mode uses greys and near-white; dark mode uses greys and near-black. Every design token is grayscale—no green, teal or warm tint.
 - **Originals protected:** photo and video edits export as new files. Locked Folder imports are encrypted copies.
 
-## Features in v0.5.1
+## Features in v0.5.2
 
 ### Gallery and organisation
 - [x] Adaptive staggered photo and video grid with consistent spacing and dimensions.
 - [x] Local MediaStore metadata: file name, folder, album, dimensions, size, date and duration where available.
-- [x] Device-folder albums and custom virtual albums.
+- [x] Device-folder albums and custom virtual albums with smooth lazy-recycled rows.
 - [x] Add/remove media from custom albums; rename and delete collections.
 - [x] Persistent local favourites.
 - [x] Newest/oldest sorting and compact/comfortable/large grid settings.
 - [x] Dedicated local Search destination for filenames, folders, albums, MIME types, dates, photos, videos and favourites.
+- [x] Search result viewer navigation bounded to search matches.
 - [x] All/Albums native horizontal pager with preserved gallery and album scroll positions.
-- [x] All and Albums scroll positions preserved when switching tabs and returning from Search.
+- [x] Library statistics and version overview in Settings.
 
 ### Photo and video viewing
-- [x] Opaque activity-window media viewer (not a Dialog window), with next/previous swipes across photos and videos.
-- [x] Floating pill header and action dock remain visible, and the viewer canvas covers both system-bar edges so the gallery underneath cannot peek through.
-- [x] Photo swipes work at fit-to-screen scale; image panning takes over only after pinch zoom. Video swipes use a direction and distance threshold so normal playback taps remain usable.
-- [x] Pinch zoom and pan for photos.
-- [x] In-app video playback with Media3 controls.
-- [x] Cached video-frame thumbnails with a MediaMetadataRetriever fallback for devices whose MediaStore thumbnail provider does not return a frame.
-- [x] Share sheet, favourites, metadata, album actions and move-to-trash action. The viewer closes only after Android confirms the trash request.
+- [x] Opaque activity-window media viewer with immersive chrome toggle on tap.
+- [x] Double-tap to zoom (toggle 1x <-> 2.5x) and boundary-clamped pan gestures for photos.
+- [x] Pinch zoom and pan for photos with pager swipe lock when zoomed.
+- [x] Next/previous swipes across photos and videos.
+- [x] In-app video playback with Media3 ExoPlayer and lifecycle-aware pause.
+- [x] Cached video-frame thumbnails with a MediaMetadataRetriever fallback.
+- [x] Share sheet, favourites, metadata, album actions and move-to-trash action with system confirmation.
 
 ### Editing and privacy
-- [x] Photo editor: crop ratios, rotate, brightness, contrast and saturation.
+- [x] Photo editor: crop ratios, animated 90° rotation, brightness, contrast and saturation.
+- [x] Live frame scrubbing when adjusting video trim start and end sliders.
+- [x] Edited photos export as new copies; originals are never overwritten.
+- [x] Basic video editor: trim start/end and export a new MP4 copy.
 - [x] Edited photos export as new copies; originals are never overwritten.
 - [x] Basic video editor: trim start/end and export a new MP4 copy.
 - [x] Recently Deleted through Android's system trash confirmation where supported.

@@ -164,6 +164,11 @@ fun PhotoEditorScreen(
                     animationSpec = androidx.compose.animation.core.spring(stiffness = 420f, dampingRatio = 0.84f),
                     label = "editorPreviewScale"
                 )
+                val previewRotation by animateFloatAsState(
+                    targetValue = rotateQuarterTurns * 90f,
+                    animationSpec = androidx.compose.animation.core.spring(stiffness = 500f, dampingRatio = 0.8f),
+                    label = "editorPreviewRotation"
+                )
                 bitmap?.let { preview ->
                     Image(
                         bitmap = preview.asImageBitmap(),
@@ -172,6 +177,7 @@ fun PhotoEditorScreen(
                             alpha = previewAlpha
                             scaleX = previewScale
                             scaleY = previewScale
+                            rotationZ = previewRotation
                         },
                         contentScale = ContentScale.Fit,
                         colorFilter = ColorFilter.colorMatrix(photoColorMatrix(brightness, contrast, saturation))
@@ -307,6 +313,7 @@ fun VideoTrimScreen(
     var duration by remember(item.uri) { mutableStateOf(item.durationMillis) }
     var startFraction by remember(item.uri) { mutableFloatStateOf(0f) }
     var endFraction by remember(item.uri) { mutableFloatStateOf(1f) }
+    var seekToMs by remember(item.uri) { mutableStateOf(0L) }
     var exporting by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
 
@@ -335,7 +342,7 @@ fun VideoTrimScreen(
                     Text(item.displayName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
             }
-            VideoPreview(item, Modifier.fillMaxWidth().weight(1f).padding(14.dp))
+            VideoPreview(item, seekToMs, Modifier.fillMaxWidth().weight(1f).padding(14.dp))
             Column(Modifier.padding(horizontal = 22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(R.string.trim_video), style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -344,9 +351,25 @@ fun VideoTrimScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(stringResource(R.string.trim_start), style = MaterialTheme.typography.labelLarge)
-                Slider(value = startFraction, onValueChange = { startFraction = it.coerceAtMost(endFraction - 0.05f) }, valueRange = 0f..0.95f, enabled = duration > 0 && !exporting)
+                Slider(
+                    value = startFraction,
+                    onValueChange = {
+                        startFraction = it.coerceAtMost(endFraction - 0.05f)
+                        seekToMs = (duration * startFraction).toLong()
+                    },
+                    valueRange = 0f..0.95f,
+                    enabled = duration > 0 && !exporting
+                )
                 Text(stringResource(R.string.trim_end), style = MaterialTheme.typography.labelLarge)
-                Slider(value = endFraction, onValueChange = { endFraction = it.coerceAtLeast(startFraction + 0.05f) }, valueRange = 0.05f..1f, enabled = duration > 0 && !exporting)
+                Slider(
+                    value = endFraction,
+                    onValueChange = {
+                        endFraction = it.coerceAtLeast(startFraction + 0.05f)
+                        seekToMs = (duration * endFraction).toLong()
+                    },
+                    valueRange = 0.05f..1f,
+                    enabled = duration > 0 && !exporting
+                )
                 if (duration <= 0L) Text(stringResource(R.string.video_duration_unavailable), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 status?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 Button(
@@ -410,7 +433,7 @@ fun VideoTrimScreen(
 }
 
 @Composable
-private fun VideoPreview(item: MediaItem, modifier: Modifier = Modifier) {
+private fun VideoPreview(item: MediaItem, seekToMs: Long, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val player = remember(item.uri) {
         ExoPlayer.Builder(context).build().apply {
@@ -418,6 +441,9 @@ private fun VideoPreview(item: MediaItem, modifier: Modifier = Modifier) {
             prepare()
             playWhenReady = false
         }
+    }
+    LaunchedEffect(seekToMs) {
+        player.seekTo(seekToMs)
     }
     androidx.compose.runtime.DisposableEffect(player) { onDispose { player.release() } }
     AndroidView(

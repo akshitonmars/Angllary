@@ -538,7 +538,7 @@ fun AngllaryApp(
                         AppPage.SEARCH -> SearchScreen(
                             media = orderedMedia,
                             favoriteUris = favoriteUris,
-                            onOpen = { openViewer(it, orderedMedia) }
+                            onOpen = { clicked, results -> openViewer(clicked, results) }
                         )
 
                         AppPage.FAVORITES -> SimpleAlbumScreen(
@@ -609,6 +609,9 @@ fun AngllaryApp(
                             themeMode = themeMode,
                             gridMode = gridMode,
                             sortMode = sortMode,
+                            totalMediaCount = media.size,
+                            photosCount = media.count { !it.isVideo },
+                            videosCount = media.count { it.isVideo },
                             onThemeChange = {
                                 themeMode = it
                                 galleryStore.setThemeMode(it)
