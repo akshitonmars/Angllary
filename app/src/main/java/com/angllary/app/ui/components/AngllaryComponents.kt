@@ -387,6 +387,7 @@ fun MediaGrid(
     onDateChanged: (MediaItem) -> Unit,
     onMediaClick: (MediaItem) -> Unit,
     onFavoriteToggle: (MediaItem) -> Unit = {},
+    onSelectionActiveChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -445,6 +446,7 @@ fun MediaGrid(
                             localView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                             focusedItem = item
                             focusedMenuExpanded = false
+                            onSelectionActiveChange(true)
                         }
                     )
             ) {
@@ -523,6 +525,7 @@ fun MediaGrid(
                 ) {
                     focusedItem = null
                     focusedMenuExpanded = false
+                    onSelectionActiveChange(false)
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -568,6 +571,7 @@ fun MediaGrid(
                         IconButton(onClick = {
                             focusedItem = null
                             focusedMenuExpanded = false
+                            onSelectionActiveChange(false)
                         }) {
                             Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.close), tint = Color.White)
                         }
@@ -596,7 +600,7 @@ fun MediaGrid(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                        IconButton(onClick = rememberHapticClick { onMediaClick(selected); focusedItem = null }) {
+                        IconButton(onClick = rememberHapticClick { onMediaClick(selected); focusedItem = null; onSelectionActiveChange(false) }) {
                             Icon(Icons.Outlined.OpenInFull, contentDescription = stringResource(R.string.open))
                         }
                         Box {
@@ -612,6 +616,7 @@ fun MediaGrid(
                                     onClick = {
                                         focusedMenuExpanded = false
                                         focusedItem = null
+                                        onSelectionActiveChange(false)
                                         onMediaClick(selected)
                                     }
                                 )
