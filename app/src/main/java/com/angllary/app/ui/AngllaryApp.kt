@@ -63,6 +63,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
@@ -157,6 +158,7 @@ fun AngllaryApp(
     var activePage by remember { mutableStateOf(AppPage.HOME) }
     var openedAlbum by remember { mutableStateOf<OpenAlbum?>(null) }
     var dateLabel by remember { mutableStateOf(context.getString(R.string.today)) }
+    var mediaSelectionActive by remember { mutableStateOf(false) }
     var sortMode by remember { mutableStateOf(galleryStore.sortMode()) }
     var gridMode by remember { mutableStateOf(galleryStore.gridMode()) }
     var themeMode by remember { mutableStateOf(galleryStore.themeMode()) }
@@ -445,6 +447,7 @@ fun AngllaryApp(
                                 dateLabel = dateLabel,
                                 showDate = selectedTab == MainTab.ALL,
                                 isScrolled = headerIsScrolled,
+                                modifier = Modifier.blur(if (mediaSelectionActive) 17.dp else 0.dp),
                                 onSort = {
                                     sortMode = if (sortMode == "newest") "oldest" else "newest"
                                     galleryStore.setSortMode(sortMode)
@@ -533,6 +536,7 @@ fun AngllaryApp(
                                         onDateChanged = { dateLabel = formatDateLabel(it.displayDateMillis, context) },
                                         onMediaClick = { openViewer(it, orderedMedia) },
                                         onFavoriteToggle = { updateFavorite(it) },
+                                        onSelectionActiveChange = { mediaSelectionActive = it },
                                         gridState = homeGridState
                                     )
                                     MainTab.ALBUMS -> AlbumsScreen(
@@ -672,6 +676,7 @@ fun AngllaryApp(
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(bottom = 10.dp)
+                .blur(if (mediaSelectionActive) 17.dp else 0.dp)
         ) {
             AngllaryBottomBar(
                 selectedTab = selectedTab,
