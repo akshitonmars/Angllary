@@ -503,7 +503,6 @@ fun MediaGrid(
                 }
             }
         }
-        }
     }
 
     focusedItem?.let { selected ->
