@@ -2,7 +2,7 @@
 
 ## Product feel
 
-Version 0.5.1 completes the interface around true black/white foundations, floating pill controls and native paging.
+Version 0.6.0 completes the interface around true black/white foundations, floating pill controls and native paging.
 
 Angllary is a quiet, media-first gallery. Content is the focal point; navigation and actions are a light, consistent layer rather than heavy app chrome.
 
@@ -54,12 +54,14 @@ The brand and date in the top bar are typographic elements, not separate competi
 - Media viewer is drawn as an opaque activity-level Compose overlay rather than an Android Dialog window. It covers the complete edge-to-edge canvas, including system-bar regions, and prevents the underlying gallery from showing through.
 - Viewer header and action dock are persistent floating pills; the trash action remains available while Android's confirmation UI is shown.
 
-- Main header: brand at left, scroll-aware date centred, overflow menu at right.
+- Main header: app mark and brand at left, a standalone date pill without a calendar glyph, and a separate overflow pill at right. The status-bar region uses the same real clipped surface; scrolling morphs the header into a smaller floating pill.
 - Bottom dock: Search action, divider, All and Albums.
 - A native horizontal pager switches All/Albums, leaving vertical scrolling to each page. The selected destination and scroll positions survive switching and opening Search.
 - Search is a dedicated destination, not a modal dialog.
 - System predictive back moves the destination surface with the back gesture.
-- The viewer pages horizontally through photos and videos. Video paging is detected on the video canvas without intentionally consuming player-control touches.
+- The viewer pages horizontally through photos and videos. Video playback uses custom Compose controls and a dedicated seek bar placed above the action dock; Media3's built-in controller is disabled to prevent overlapping UI.
+- Long-press on a library tile opens a focused, enlarged media preview over a blurred grid and blurred navigation chrome, with a compact action menu.
+- Media details open as a distinct full-screen information destination.
 
 ## Motion direction
 
@@ -87,7 +89,7 @@ Motion references were explored through Figma Smart Animate concepts and Skiper 
 
 ## Albums and Search
 
-- Device albums are derived from MediaStore folders.
+- Device albums are derived from MediaStore folders and use compact thumbnail rows; user-created collections retain cover-card tiles.
 - Custom albums are virtual collections of MediaStore URIs; they do not duplicate original files.
 - Album cards share one aspect ratio, corner shape and pressed-state animation.
 - All/Albums scroll states are held above the animated destination so they can be restored.

@@ -29,12 +29,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
@@ -51,6 +54,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -61,6 +65,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
@@ -142,9 +147,20 @@ fun AngllaryApp(
     }
     val homeGridState = rememberLazyStaggeredGridState()
     val albumsListState = rememberLazyListState()
+
+    val headerIsScrolled by remember {
+        derivedStateOf {
+            if (selectedTab == MainTab.ALL) {
+                homeGridState.firstVisibleItemIndex > 0 || homeGridState.firstVisibleItemScrollOffset > 36
+            } else {
+                albumsListState.firstVisibleItemIndex > 0 || albumsListState.firstVisibleItemScrollOffset > 36
+            }
+        }
+    }
     var activePage by remember { mutableStateOf(AppPage.HOME) }
     var openedAlbum by remember { mutableStateOf<OpenAlbum?>(null) }
     var dateLabel by remember { mutableStateOf(context.getString(R.string.today)) }
+    var mediaSelectionActive by remember { mutableStateOf(false) }
     var sortMode by remember { mutableStateOf(galleryStore.sortMode()) }
     var gridMode by remember { mutableStateOf(galleryStore.gridMode()) }
     var themeMode by remember { mutableStateOf(galleryStore.themeMode()) }
@@ -415,19 +431,7 @@ fun AngllaryApp(
             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
         ) {
         Column(Modifier.fillMaxSize()) {
-            androidx.compose.material3.Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp,
-                shadowElevation = 3.dp,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                )
-            ) {
-                Box(Modifier.statusBarsPadding()) {
-                    AnimatedContent(
+            AnimatedContent(
                         targetState = activePage,
                         transitionSpec = {
                             if (targetState.ordinal >= initialState.ordinal) {
@@ -443,6 +447,9 @@ fun AngllaryApp(
                         if (page == AppPage.HOME) {
                             AngllaryTopBar(
                                 dateLabel = dateLabel,
+                                showDate = selectedTab == MainTab.ALL,
+                                isScrolled = headerIsScrolled,
+                                modifier = Modifier.blur(if (mediaSelectionActive) 17.dp else 0.dp),
                                 onSort = {
                                     sortMode = if (sortMode == "newest") "oldest" else "newest"
                                     galleryStore.setSortMode(sortMode)
@@ -478,8 +485,6 @@ fun AngllaryApp(
                             )
                         }
                     }
-                }
-            }
 
             Box(
                 Modifier.weight(1f).fillMaxWidth().graphicsLayer {
@@ -532,6 +537,8 @@ fun AngllaryApp(
                                         onRequestPermission = { permissionLauncher.launch(mediaPermissions()) },
                                         onDateChanged = { dateLabel = formatDateLabel(it.displayDateMillis, context) },
                                         onMediaClick = { openViewer(it, orderedMedia) },
+                                        onFavoriteToggle = { updateFavorite(it) },
+                                        onSelectionActiveChange = { mediaSelectionActive = it },
                                         gridState = homeGridState
                                     )
                                     MainTab.ALBUMS -> AlbumsScreen(
@@ -567,7 +574,6 @@ fun AngllaryApp(
                         )
 
                         AppPage.FAVORITES -> SimpleAlbumScreen(
-                            title = stringResource(R.string.favorites),
                             media = orderedMedia.filter { it.uri.toString() in favoriteUris || "content://media/external/file/${it.id}" in favoriteUris },
                             favoriteUris = favoriteUris,
                             minCellSize = gridCellSize,
@@ -653,7 +659,6 @@ fun AngllaryApp(
                         )
 
                         AppPage.ALBUM -> SimpleAlbumScreen(
-                            title = openedAlbum?.name.orEmpty(),
                             media = activeAlbumItems,
                             favoriteUris = favoriteUris,
                             minCellSize = gridCellSize,
@@ -673,6 +678,7 @@ fun AngllaryApp(
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(bottom = 10.dp)
+                .blur(if (mediaSelectionActive) 17.dp else 0.dp)
         ) {
             AngllaryBottomBar(
                 selectedTab = selectedTab,
@@ -840,15 +846,29 @@ fun AngllaryApp(
 @Composable
 private fun SubPageHeader(title: String, onBack: () -> Unit) {
     val backClick = rememberHapticClick(onBack)
-    Row(
-        modifier = Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    androidx.compose.material3.Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 3.dp,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+        )
     ) {
-        androidx.compose.material3.IconButton(onClick = backClick) {
-            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back))
+        Column {
+            Spacer(Modifier.windowInsetsTopHeight(androidx.compose.foundation.layout.WindowInsets.statusBars))
+            Row(
+                modifier = Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                androidx.compose.material3.IconButton(onClick = backClick) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back))
+                }
+                Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f), maxLines = 1)
+            }
         }
-        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f), maxLines = 1)
     }
 }
 

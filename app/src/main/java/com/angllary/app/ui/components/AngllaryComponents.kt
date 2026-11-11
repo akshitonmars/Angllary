@@ -1,15 +1,21 @@
 package com.angllary.app.ui.components
 
 import android.view.HapticFeedbackConstants
+import android.content.Intent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,13 +32,16 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Collections
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.OpenInFull
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Sort
@@ -44,6 +53,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -61,7 +72,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -87,6 +104,8 @@ fun rememberHapticClick(onClick: () -> Unit): () -> Unit {
 @Composable
 fun AngllaryTopBar(
     dateLabel: String,
+    showDate: Boolean,
+    isScrolled: Boolean,
     onSort: () -> Unit,
     onGrid: () -> Unit,
     onFavorites: () -> Unit,
@@ -98,102 +117,137 @@ fun AngllaryTopBar(
     var menuExpanded by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
     val haptic = rememberHapticClick { menuExpanded = true }
-    val sortClick = rememberHapticClick { onSort() }
-    val gridClick = rememberHapticClick { onGrid() }
-    val favoritesClick = rememberHapticClick { onFavorites() }
-    val lockedClick = rememberHapticClick { onLockedFolder() }
-    val trashClick = rememberHapticClick { onTrash() }
-    val settingsClick = rememberHapticClick { onSettings() }
+    val sortClick = rememberHapticClick(onSort)
+    val gridClick = rememberHapticClick(onGrid)
+    val favoritesClick = rememberHapticClick(onFavorites)
+    val lockedClick = rememberHapticClick(onLockedFolder)
+    val trashClick = rememberHapticClick(onTrash)
+    val settingsClick = rememberHapticClick(onSettings)
+    val sideMargin by animateDpAsState(if (isScrolled) 13.dp else 0.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerMargin")
+    val topMargin by animateDpAsState(if (isScrolled) 7.dp else 0.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerTopMargin")
+    val rowHeight by animateDpAsState(if (isScrolled) 58.dp else 66.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerHeight")
+    val topRadius by animateDpAsState(if (isScrolled) 28.dp else 0.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerTopRadius")
+    val bottomRadius by animateDpAsState(if (isScrolled) 28.dp else 27.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerBottomRadius")
+    val elevation by animateDpAsState(if (isScrolled) 13.dp else 3.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerElevation")
     val menuRotation by animateFloatAsState(
         targetValue = if (menuExpanded) 90f else 0f,
         animationSpec = spring(stiffness = 520f, dampingRatio = 0.78f),
         label = "menuIconRotation"
     )
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(62.dp)
-            .padding(horizontal = 20.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        modifier = modifier.fillMaxWidth().padding(horizontal = sideMargin).padding(top = topMargin),
+        shape = RoundedCornerShape(
+            topStart = topRadius,
+            topEnd = topRadius,
+            bottomStart = bottomRadius,
+            bottomEnd = bottomRadius
+        ),
+        color = colors.surface,
+        contentColor = colors.onSurface,
+        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = if (isScrolled) 0.85f else 0.38f)),
+        tonalElevation = if (isScrolled) 3.dp else 1.dp,
+        shadowElevation = elevation
     ) {
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.titleLarge,
-            color = colors.onBackground,
-            maxLines = 1
-        )
-
-        Spacer(Modifier.weight(1f))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Icon(
-                Icons.Outlined.Today,
-                contentDescription = null,
-                tint = colors.onSurfaceVariant,
-                modifier = Modifier.size(14.dp)
-            )
-            Text(
-                text = dateLabel,
-                style = MaterialTheme.typography.labelLarge,
-                color = colors.onSurfaceVariant,
-                maxLines = 1
-            )
-        }
-
-        Spacer(Modifier.weight(1f))
-
-        Box {
-            IconButton(onClick = haptic, modifier = Modifier.size(44.dp)) {
-                Icon(
-                    Icons.Outlined.MoreHoriz,
-                    contentDescription = stringResource(R.string.open_menu),
-                    tint = colors.onSurface,
-                    modifier = Modifier.size(23.dp).graphicsLayer { rotationZ = menuRotation }
-                )
-            }
-            DropdownMenu(
-                expanded = menuExpanded,
-                onDismissRequest = { menuExpanded = false }
+        Column {
+            Spacer(Modifier.windowInsetsTopHeight(androidx.compose.foundation.layout.WindowInsets.statusBars))
+            Row(
+                modifier = Modifier.fillMaxWidth().height(rowHeight).padding(horizontal = if (isScrolled) 14.dp else 19.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.sort)) },
-                    leadingIcon = { Icon(Icons.Outlined.Sort, contentDescription = null) },
-                    onClick = { menuExpanded = false; sortClick() }
+                Surface(
+                    shape = RoundedCornerShape(11.dp),
+                    color = Color.Black,
+                    modifier = Modifier.size(35.dp)
+                ) {
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(R.drawable.ic_launcher_foreground),
+                        contentDescription = stringResource(R.string.app_name),
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().padding(3.dp)
+                    )
+                }
+                Spacer(Modifier.width(9.dp))
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = colors.onSurface,
+                    maxLines = 1
                 )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.grid)) },
-                    leadingIcon = { Icon(Icons.Outlined.GridView, contentDescription = null) },
-                    onClick = { menuExpanded = false; gridClick() }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.favorites)) },
-                    leadingIcon = { Icon(Icons.Outlined.Star, contentDescription = null) },
-                    onClick = { menuExpanded = false; favoritesClick() }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.locked_folder)) },
-                    leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
-                    onClick = { menuExpanded = false; lockedClick() }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.recently_deleted)) },
-                    leadingIcon = { Icon(Icons.Outlined.DeleteOutline, contentDescription = null) },
-                    onClick = { menuExpanded = false; trashClick() }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.settings)) },
-                    leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
-                    onClick = { menuExpanded = false; settingsClick() }
-                )
+
+                Spacer(Modifier.weight(1f))
+
+                if (showDate) {
+                    Surface(
+                        shape = RoundedCornerShape(50.dp),
+                        color = colors.surfaceVariant,
+                        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.55f))
+                    ) {
+                        Text(
+                            text = dateLabel,
+                            modifier = Modifier.padding(horizontal = 13.dp, vertical = 9.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = colors.onSurface,
+                            maxLines = 1
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
+
+                Box {
+                    Surface(
+                        onClick = haptic,
+                        shape = RoundedCornerShape(50.dp),
+                        color = colors.surfaceVariant,
+                        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.55f)),
+                        modifier = Modifier.size(42.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Outlined.MoreHoriz,
+                                contentDescription = stringResource(R.string.open_menu),
+                                tint = colors.onSurface,
+                                modifier = Modifier.size(23.dp).graphicsLayer { rotationZ = menuRotation }
+                            )
+                        }
+                    }
+                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.sort)) },
+                            leadingIcon = { Icon(Icons.Outlined.Sort, contentDescription = null) },
+                            onClick = { menuExpanded = false; sortClick() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.grid)) },
+                            leadingIcon = { Icon(Icons.Outlined.GridView, contentDescription = null) },
+                            onClick = { menuExpanded = false; gridClick() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.favorites)) },
+                            leadingIcon = { Icon(Icons.Outlined.Star, contentDescription = null) },
+                            onClick = { menuExpanded = false; favoritesClick() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.locked_folder)) },
+                            leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
+                            onClick = { menuExpanded = false; lockedClick() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.recently_deleted)) },
+                            leadingIcon = { Icon(Icons.Outlined.DeleteOutline, contentDescription = null) },
+                            onClick = { menuExpanded = false; trashClick() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.settings)) },
+                            leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
+                            onClick = { menuExpanded = false; settingsClick() }
+                        )
+                    }
+                }
             }
         }
     }
 }
-
 @Composable
 fun AngllaryBottomBar(
     selectedTab: MainTab,
@@ -325,6 +379,7 @@ private fun DockTab(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MediaGrid(
     media: List<MediaItem>,
@@ -333,8 +388,19 @@ fun MediaGrid(
     state: LazyStaggeredGridState,
     onDateChanged: (MediaItem) -> Unit,
     onMediaClick: (MediaItem) -> Unit,
+    onFavoriteToggle: (MediaItem) -> Unit = {},
+    onSelectionActiveChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val localView = LocalView.current
+    var focusedItem by remember { mutableStateOf<MediaItem?>(null) }
+    var focusedMenuExpanded by remember { mutableStateOf(false) }
+    val blurRadius by animateDpAsState(
+        targetValue = if (focusedItem != null) 17.dp else 0.dp,
+        animationSpec = spring(stiffness = 360f, dampingRatio = 0.88f),
+        label = "selectionBackgroundBlur"
+    )
     LaunchedEffect(media, state) {
         snapshotFlow { state.layoutInfo.visibleItemsInfo.minByOrNull { it.index }?.index }
             .distinctUntilChanged()
@@ -346,7 +412,7 @@ fun MediaGrid(
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Adaptive(minSize = minCellSize),
         state = state,
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().blur(blurRadius),
         contentPadding = PaddingValues(start = 5.dp, end = 5.dp, top = 4.dp, bottom = 124.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalItemSpacing = 4.dp
@@ -374,10 +440,16 @@ fun MediaGrid(
                     .aspectRatio(ratio)
                     .graphicsLayer { scaleX = scale; scaleY = scale }
                     .clip(RoundedCornerShape(13.dp))
-                    .clickable(
+                    .combinedClickable(
                         interactionSource = source,
                         indication = null,
-                        onClick = rememberHapticClick { onMediaClick(item) }
+                        onClick = rememberHapticClick { onMediaClick(item) },
+                        onLongClick = {
+                            localView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                            focusedItem = item
+                            focusedMenuExpanded = false
+                            onSelectionActiveChange(true)
+                        }
                     )
             ) {
                 MediaThumbnail(
@@ -431,6 +503,146 @@ fun MediaGrid(
                             tint = Color.White,
                             modifier = Modifier.padding(5.dp).size(13.dp)
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    focusedItem?.let { selected ->
+        val ratio = if (selected.width > 0 && selected.height > 0) {
+            (selected.width.toFloat() / selected.height.toFloat()).coerceIn(0.62f, 1.55f)
+        } else if (selected.isVideo) 1.2f else 0.92f
+        val focusScale by animateFloatAsState(
+            targetValue = 1f,
+            animationSpec = spring(stiffness = 300f, dampingRatio = 0.78f),
+            label = "selectedMediaScale"
+        )
+        Box(
+            modifier = Modifier.fillMaxSize().zIndex(10f)
+                .background(Color.Black.copy(alpha = 0.62f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    focusedItem = null
+                    focusedMenuExpanded = false
+                    onSelectionActiveChange(false)
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(0.86f).graphicsLayer {
+                    scaleX = focusScale
+                    scaleY = focusScale
+                }.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {},
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().aspectRatio(ratio)
+                        .clip(RoundedCornerShape(23.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    MediaThumbnail(
+                        item = selected,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    if (selected.isVideo) {
+                        Surface(
+                            modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
+                            shape = RoundedCornerShape(9.dp),
+                            color = Color.Black.copy(alpha = 0.74f)
+                        ) {
+                            Text(
+                                formatDuration(selected.durationMillis),
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    }
+                    Surface(
+                        modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).size(40.dp),
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.62f)
+                    ) {
+                        IconButton(onClick = {
+                            focusedItem = null
+                            focusedMenuExpanded = false
+                            onSelectionActiveChange(false)
+                        }) {
+                            Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.close), tint = Color.White)
+                        }
+                    }
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    shadowElevation = 20.dp
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 17.dp, end = 7.dp, top = 8.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(selected.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                selected.albumName.ifBlank { selected.relativePath.ifBlank { if (selected.isVideo) "Video" else "Photo" } },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        IconButton(onClick = rememberHapticClick { onMediaClick(selected); focusedItem = null; onSelectionActiveChange(false) }) {
+                            Icon(Icons.Outlined.OpenInFull, contentDescription = stringResource(R.string.open))
+                        }
+                        Box {
+                            IconButton(onClick = rememberHapticClick { focusedMenuExpanded = true }) {
+                                Icon(Icons.Outlined.MoreHoriz, contentDescription = stringResource(R.string.more_options))
+                            }
+                            DropdownMenu(
+                                expanded = focusedMenuExpanded,
+                                onDismissRequest = { focusedMenuExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.open)) },
+                                    onClick = {
+                                        focusedMenuExpanded = false
+                                        focusedItem = null
+                                        onSelectionActiveChange(false)
+                                        onMediaClick(selected)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.share)) },
+                                    onClick = {
+                                        focusedMenuExpanded = false
+                                        val send = Intent(Intent.ACTION_SEND).apply {
+                                            type = selected.mimeType.ifBlank { if (selected.isVideo) "video/*" else "image/*" }
+                                            putExtra(Intent.EXTRA_STREAM, selected.uri)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        runCatching { context.startActivity(Intent.createChooser(send, null)) }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (favoriteUris.contains(selected.uri.toString())) stringResource(R.string.remove_favorite) else stringResource(R.string.favorite)) },
+                                    onClick = {
+                                        focusedMenuExpanded = false
+                                        onFavoriteToggle(selected)
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }

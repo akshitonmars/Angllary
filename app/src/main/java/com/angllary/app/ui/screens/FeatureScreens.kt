@@ -124,6 +124,8 @@ fun GalleryScreen(
     onRequestPermission: () -> Unit,
     onDateChanged: (MediaItem) -> Unit,
     onMediaClick: (MediaItem) -> Unit,
+    onFavoriteToggle: (MediaItem) -> Unit = {},
+    onSelectionActiveChange: (Boolean) -> Unit = {},
     gridState: androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState,
     modifier: Modifier = Modifier
 ) {
@@ -142,7 +144,9 @@ fun GalleryScreen(
                 minCellSize = minCellSize,
                 state = gridState,
                 onDateChanged = onDateChanged,
-                onMediaClick = onMediaClick
+                onMediaClick = onMediaClick,
+                onFavoriteToggle = onFavoriteToggle,
+                onSelectionActiveChange = onSelectionActiveChange
             )
         }
     }
@@ -256,26 +260,73 @@ fun AlbumsScreen(
                 )
             }
         } else {
-            items(groups.chunked(2), key = { pair -> pair.joinToString("-") { it.id } }) { rowAlbums ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    for (album in rowAlbums) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            AlbumCard(
-                                title = album.name,
-                                count = album.media.size,
-                                cover = album.media.firstOrNull(),
-                                onClick = { onOpenDeviceAlbum(album.id, album.name) }
-                            )
-                        }
-                    }
-                    if (rowAlbums.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
+            items(groups, key = { it.id }) { album ->
+                DeviceAlbumRow(
+                    title = album.name,
+                    count = album.media.size,
+                    cover = album.media.firstOrNull(),
+                    onClick = { onOpenDeviceAlbum(album.id, album.name) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeviceAlbumRow(
+    title: String,
+    count: Int,
+    cover: MediaItem?,
+    onClick: () -> Unit
+) {
+    val click = rememberHapticClick(onClick)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = click,
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+        )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(88.dp).padding(7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(13.dp)
+        ) {
+            Box(
+                modifier = Modifier.size(74.dp).clip(RoundedCornerShape(13.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                if (cover != null) {
+                    MediaThumbnail(
+                        item = cover,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(Icons.Outlined.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    stringResource(R.string.items_count, count),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Outlined.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 8.dp).size(18.dp)
+            )
         }
     }
 }
@@ -1048,7 +1099,6 @@ private fun SegmentedPillRow(
 
 @Composable
 fun SimpleAlbumScreen(
-    title: String,
     media: List<MediaItem>,
     favoriteUris: Set<String>,
     minCellSize: androidx.compose.ui.unit.Dp,
@@ -1057,7 +1107,6 @@ fun SimpleAlbumScreen(
     modifier: Modifier = Modifier
 ) {
     Column(modifier.fillMaxSize()) {
-        Text(title, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
         if (media.isEmpty()) {
             EmptyState(
                 title = stringResource(R.string.album_empty_title),
