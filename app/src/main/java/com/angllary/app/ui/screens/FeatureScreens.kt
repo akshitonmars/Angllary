@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -116,9 +117,9 @@ fun GalleryScreen(
     onRequestPermission: () -> Unit,
     onDateChanged: (MediaItem) -> Unit,
     onMediaClick: (MediaItem) -> Unit,
+    gridState: androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState,
     modifier: Modifier = Modifier
 ) {
-    val gridState = androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState()
     Box(modifier.fillMaxSize()) {
         when {
             !hasPermission -> PermissionState(onRequestPermission)
@@ -149,6 +150,7 @@ fun AlbumsScreen(
     onOpenDeviceAlbum: (String, String) -> Unit,
     onOpenCustomAlbum: (String, String) -> Unit,
     onEditCustomAlbum: (CustomAlbum) -> Unit,
+    listState: LazyListState,
     modifier: Modifier = Modifier
 ) {
     val createAlbumClick = rememberHapticClick(onCreateAlbum)
@@ -160,6 +162,7 @@ fun AlbumsScreen(
     }
 
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 26.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
