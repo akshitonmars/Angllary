@@ -125,6 +125,7 @@ fun GalleryScreen(
     onDateChanged: (MediaItem) -> Unit,
     onMediaClick: (MediaItem) -> Unit,
     onFavoriteToggle: (MediaItem) -> Unit = {},
+    onSelectionActiveChange: (Boolean) -> Unit = {},
     gridState: androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState,
     modifier: Modifier = Modifier
 ) {
@@ -144,7 +145,8 @@ fun GalleryScreen(
                 state = gridState,
                 onDateChanged = onDateChanged,
                 onMediaClick = onMediaClick,
-                onFavoriteToggle = onFavoriteToggle
+                onFavoriteToggle = onFavoriteToggle,
+                onSelectionActiveChange = onSelectionActiveChange
             )
         }
     }
