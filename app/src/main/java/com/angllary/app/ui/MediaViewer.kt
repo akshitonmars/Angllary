@@ -143,7 +143,7 @@ fun MediaViewer(
                             Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.more_options), tint = ext.viewerOnSurface)
                         }
                         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                            DropdownMenuItem(text = { Text(stringResource(R.string.add_to_album)) }, onClick = { menuExpanded = false; onAddToAlbum(currentItem) })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.add_to_album)) }, onClick = { menuExpanded = false; onAddToAlbum(currentItem) })\n                            if (onRemoveFromAlbum != null) {\n                                DropdownMenuItem(text = { Text(stringResource(R.string.remove_from_album)) }, onClick = { menuExpanded = false; onRemoveFromAlbum(currentItem) })\n                            }
                             if (!currentItem.isLocked) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.copy_to_locked_folder)) },
