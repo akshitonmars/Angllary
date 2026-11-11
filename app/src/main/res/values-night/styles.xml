@@ -7,7 +7,7 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightNavigationBar">false</item>
         <item name="android:windowBackground">@color/splash_background</item>
-        <item name="android:colorAccent">#F0EFEA</item>
+        <item name="android:colorAccent">#FFFFFF</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
 </resources>
