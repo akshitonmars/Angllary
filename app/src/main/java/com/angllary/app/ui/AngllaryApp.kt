@@ -34,6 +34,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -114,6 +116,8 @@ fun AngllaryApp(
     var lockedEntries by remember { mutableStateOf(lockedStore.entries()) }
 
     var selectedTab by remember { mutableStateOf(MainTab.ALL) }
+    val homeGridState = rememberLazyStaggeredGridState()
+    val albumsListState = rememberLazyListState()
     var activePage by remember { mutableStateOf(AppPage.HOME) }
     var openedAlbum by remember { mutableStateOf<OpenAlbum?>(null) }
     var dateLabel by remember { mutableStateOf(context.getString(R.string.today)) }
@@ -502,7 +506,8 @@ fun AngllaryApp(
                                             minCellSize = gridCellSize,
                                             onRequestPermission = { permissionLauncher.launch(mediaPermissions()) },
                                             onDateChanged = { dateLabel = formatDateLabel(it.displayDateMillis, context) },
-                                            onMediaClick = { openViewer(it, orderedMedia) }
+                                            onMediaClick = { openViewer(it, orderedMedia) },
+                                            gridState = homeGridState
                                         )
                                         MainTab.ALBUMS -> AlbumsScreen(
                                             media = orderedMedia,
@@ -523,7 +528,8 @@ fun AngllaryApp(
                                             onEditCustomAlbum = { album ->
                                                 renameAlbumValue = album.name
                                                 editAlbumTarget = album
-                                            }
+                                            },
+                                            listState = albumsListState
                                         )
                                     }
                                 }
