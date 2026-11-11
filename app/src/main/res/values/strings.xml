@@ -91,7 +91,6 @@
     <string name="import_failed">Could not import this item.</string>
     <string name="authentication_unavailable">Device authentication is unavailable.</string>
     <string name="action_failed">The action could not be completed.</string>
-    <string name="system_trash_requires_android_11">Recently Deleted uses Android system trash on Android 11 and later.</string>
     <string name="settings_subtitle">Make Angllary feel right on your device.</string>
     <string name="appearance">Appearance</string>
     <string name="system_default">Follow system</string>
