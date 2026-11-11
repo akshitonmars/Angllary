@@ -50,6 +50,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.ColorMatrix
@@ -280,9 +282,12 @@ fun VideoTrimScreen(
         if (duration <= 0L) {
             duration = withContext(Dispatchers.IO) {
                 runCatching {
-                    MediaMetadataRetriever().use { retriever ->
+                    val retriever = MediaMetadataRetriever()
+                    try {
                         retriever.setDataSource(context, item.uri)
                         retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+                    } finally {
+                        retriever.release()
                     }
                 }.getOrDefault(0L)
             }
@@ -384,7 +389,12 @@ private fun VideoPreview(item: MediaItem, modifier: Modifier = Modifier) {
     androidx.compose.runtime.DisposableEffect(player) { onDispose { player.release() } }
     AndroidView(
         modifier = modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFF171715)),
-        factory = { PlayerView(it).apply { useController = true; player = this@apply.player } },
+        factory = { viewContext ->
+            PlayerView(viewContext).apply {
+                useController = true
+                player = this@VideoPreview.player
+            }
+        },
         update = { it.player = player }
     )
 }
