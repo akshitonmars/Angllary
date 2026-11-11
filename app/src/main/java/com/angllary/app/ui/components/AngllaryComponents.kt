@@ -419,7 +419,7 @@ fun MediaGrid(
                     }
                 }
 
-                if (favoriteUris.contains(item.uri.toString())) {
+                if (favoriteUris.contains(item.uri.toString()) || favoriteUris.contains("content://media/external/file/${item.id}")) {
                     Surface(
                         modifier = Modifier.align(Alignment.TopEnd).padding(7.dp),
                         shape = RoundedCornerShape(8.dp),

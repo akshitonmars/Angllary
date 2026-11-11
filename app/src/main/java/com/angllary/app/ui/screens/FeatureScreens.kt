@@ -37,18 +37,27 @@ import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Collections
+import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Sort
+import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -331,7 +340,7 @@ fun SearchScreen(
                 when (filter) {
                     "photos" -> !item.isVideo
                     "videos" -> item.isVideo
-                    "favorites" -> item.uri.toString() in favoriteUris
+                    "favorites" -> item.uri.toString() in favoriteUris || "content://media/external/file/${item.id}" in favoriteUris
                     else -> true
                 }
             }
@@ -709,62 +718,200 @@ fun SettingsScreen(
     onSortChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.colorScheme
+
     LazyColumn(
         modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+        // App identity card
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.settings), style = MaterialTheme.typography.headlineMedium)
-                Text(stringResource(R.string.settings_subtitle), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = colors.surface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier.size(54.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = colors.onSurface,
+                        contentColor = colors.surface
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Outlined.Collections,
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp),
+                                tint = colors.surface
+                            )
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                stringResource(R.string.app_name),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.onSurface
+                            )
+                            Surface(
+                                shape = CircleShape,
+                                color = colors.surfaceVariant,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.4f))
+                            ) {
+                                Text(
+                                    "v0.5.4",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = colors.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            stringResource(R.string.local_privacy_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
-        item {
-            SettingsGroup(title = stringResource(R.string.appearance)) {
-                SettingsChoice(stringResource(R.string.system_default), themeMode == "system") { onThemeChange("system") }
-                SettingsChoice(stringResource(R.string.light_theme), themeMode == "light") { onThemeChange("light") }
-                SettingsChoice(stringResource(R.string.dark_theme), themeMode == "dark") { onThemeChange("dark") }
-            }
-        }
-        item {
-            SettingsGroup(title = stringResource(R.string.gallery_layout)) {
-                SettingsChoice(stringResource(R.string.compact_grid), gridMode == "compact") { onGridChange("compact") }
-                SettingsChoice(stringResource(R.string.comfortable_grid), gridMode == "comfortable") { onGridChange("comfortable") }
-                SettingsChoice(stringResource(R.string.large_grid), gridMode == "large") { onGridChange("large") }
-            }
-        }
-        item {
-            SettingsGroup(title = stringResource(R.string.sort_order)) {
-                SettingsChoice(stringResource(R.string.newest_first), sortMode == "newest") { onSortChange("newest") }
-                SettingsChoice(stringResource(R.string.oldest_first), sortMode == "oldest") { onSortChange("oldest") }
-            }
-        }
+
+        // Library statistics
         if (totalMediaCount > 0) {
             item {
-                SettingsGroup(title = stringResource(R.string.library_stats)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        stringResource(R.string.stats_summary, totalMediaCount, photosCount, videosCount),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                }
-            }
-        }
-        item {
-            SettingsGroup(title = stringResource(R.string.about_title)) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(vertical = 4.dp)) {
-                    Text(
-                        stringResource(R.string.app_version_label, "0.5.3"),
+                        stringResource(R.string.library_stats),
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = colors.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 4.dp)
                     )
-                    Text(
-                        stringResource(R.string.local_privacy_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        StatTile(
+                            modifier = Modifier.weight(1f),
+                            count = photosCount,
+                            label = stringResource(R.string.stat_photos),
+                            icon = Icons.Outlined.Image
+                        )
+                        StatTile(
+                            modifier = Modifier.weight(1f),
+                            count = videosCount,
+                            label = stringResource(R.string.stat_videos),
+                            icon = Icons.Outlined.VideoLibrary
+                        )
+                        StatTile(
+                            modifier = Modifier.weight(1f),
+                            count = totalMediaCount,
+                            label = stringResource(R.string.stat_total),
+                            icon = Icons.Outlined.Folder
+                        )
+                    }
+                }
+            }
+        }
+
+        // Theme / Appearance
+        item {
+            SettingsCard(
+                title = stringResource(R.string.appearance),
+                icon = Icons.Outlined.Palette,
+                subtitle = "Switching to light theme activates the light app icon and splash screen."
+            ) {
+                SegmentedPillRow(
+                    options = listOf(
+                        Triple("system", stringResource(R.string.theme_system), Icons.Outlined.Today),
+                        Triple("light", stringResource(R.string.theme_light), Icons.Outlined.LightMode),
+                        Triple("dark", stringResource(R.string.theme_dark), Icons.Outlined.DarkMode)
+                    ),
+                    selectedId = themeMode,
+                    onSelect = onThemeChange
+                )
+            }
+        }
+
+        // Gallery Layout
+        item {
+            SettingsCard(
+                title = stringResource(R.string.gallery_layout),
+                icon = Icons.Outlined.GridView,
+                subtitle = "Select preview density for photo & video tiles."
+            ) {
+                SegmentedPillRow(
+                    options = listOf(
+                        Triple("compact", stringResource(R.string.compact_grid), Icons.Outlined.GridView),
+                        Triple("comfortable", stringResource(R.string.comfortable_grid), Icons.Outlined.Collections),
+                        Triple("large", stringResource(R.string.large_grid), Icons.Outlined.Image)
+                    ),
+                    selectedId = gridMode,
+                    onSelect = onGridChange
+                )
+            }
+        }
+
+        // Timeline Sort Order
+        item {
+            SettingsCard(
+                title = stringResource(R.string.sort_order),
+                icon = Icons.Outlined.Sort,
+                subtitle = "Select chronological ordering for media timelines."
+            ) {
+                SegmentedPillRow(
+                    options = listOf(
+                        Triple("newest", stringResource(R.string.newest_first), Icons.AutoMirrored.Outlined.ArrowForward),
+                        Triple("oldest", stringResource(R.string.oldest_first), Icons.Outlined.Today)
+                    ),
+                    selectedId = sortMode,
+                    onSelect = onSortChange
+                )
+            }
+        }
+
+        // Security & Privacy Card
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = colors.surface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier.size(42.dp),
+                        shape = CircleShape,
+                        color = colors.surfaceVariant
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.onSurface, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.security_privacy),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.onSurface
+                        )
+                        Text(
+                            stringResource(R.string.security_privacy_summary),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -772,32 +919,131 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsGroup(title: String, content: @Composable () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
+private fun StatTile(
+    modifier: Modifier = Modifier,
+    count: Int,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        color = colors.surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.45f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Column(Modifier.animateContentSize().padding(horizontal = 15.dp, vertical = 7.dp)) { content() }
+            Icon(icon, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = colors.onSurface
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.onSurfaceVariant,
+                maxLines = 1
+            )
         }
     }
 }
 
 @Composable
-private fun SettingsChoice(label: String, selected: Boolean, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = rememberHapticClick(onClick)).padding(vertical = 11.dp),
-        verticalAlignment = Alignment.CenterVertically
+private fun SettingsCard(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    subtitle: String? = null,
+    content: @Composable () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = colors.surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f))
     ) {
-        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        AnimatedVisibility(
-            visible = selected,
-            enter = fadeIn(tween(140)) + scaleIn(initialScale = 0.7f, animationSpec = tween(170)),
-            exit = fadeOut(tween(100)) + scaleOut(targetScale = 0.8f, animationSpec = tween(120))
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(Icons.Outlined.Check, contentDescription = stringResource(R.string.selected), tint = MaterialTheme.colorScheme.onSurface)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(icon, contentDescription = null, tint = colors.onSurface, modifier = Modifier.size(20.dp))
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.onSurface
+                )
+            }
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant
+                )
+            }
+            content()
+        }
+    }
+}
+
+@Composable
+private fun SegmentedPillRow(
+    options: List<Triple<String, String, androidx.compose.ui.graphics.vector.ImageVector>>,
+    selectedId: String,
+    onSelect: (String) -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = colors.surfaceVariant.copy(alpha = 0.55f)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            options.forEach { (id, label, icon) ->
+                val isSelected = id == selectedId
+                val click = rememberHapticClick { onSelect(id) }
+                Surface(
+                    modifier = Modifier.weight(1f).clickable(onClick = click),
+                    shape = RoundedCornerShape(11.dp),
+                    color = if (isSelected) colors.surface else Color.Transparent,
+                    shadowElevation = if (isSelected) 1.5.dp else 0.dp,
+                    border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.4f)) else null
+                ) {
+                    Row(
+                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = if (isSelected) colors.onSurface else colors.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (isSelected) colors.onSurface else colors.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
         }
     }
 }

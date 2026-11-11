@@ -142,4 +142,13 @@
     <string name="library_stats">Library statistics</string>
     <string name="stats_summary">%1$d items (%2$d photos, %3$d videos)</string>
     <string name="app_version_label">Version %1$s</string>
+    <string name="item_deleted">Item deleted</string>
+    <string name="stat_photos">Photos</string>
+    <string name="stat_videos">Videos</string>
+    <string name="stat_total">Total Items</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="security_privacy">Security &amp; Privacy</string>
+    <string name="security_privacy_summary">Your photos stay 100% on this device. No network tracking, no account required.</string>
 </resources>

@@ -1,29 +1,40 @@
 package com.angllary.app
 
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.setValue
-import androidx.fragment.app.FragmentActivity
 import androidx.core.view.WindowCompat
+import androidx.fragment.app.FragmentActivity
 import com.angllary.app.data.GalleryStore
 import com.angllary.app.data.MediaStoreRepository
 import com.angllary.app.ui.AngllaryApp
 import com.angllary.app.ui.theme.AngllaryTheme
+import com.angllary.app.util.AppIconManager
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        val galleryStore = GalleryStore(applicationContext)
+        val initialThemeMode = galleryStore.themeMode()
+        val isSystemDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val isLight = when (initialThemeMode) {
+            "light" -> true
+            "dark" -> false
+            else -> !isSystemDark
+        }
+        setTheme(if (isLight) R.style.Theme_Angllary_Light else R.style.Theme_Angllary_Dark)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        AppIconManager.syncIconWithTheme(applicationContext, initialThemeMode, isSystemDark)
 
         setContent {
-            val galleryStore = remember { GalleryStore(applicationContext) }
-            var themeMode by remember { mutableStateOf(galleryStore.themeMode()) }
+            var themeMode by remember { mutableStateOf(initialThemeMode) }
             val systemDark = isSystemInDarkTheme()
             val darkTheme = when (themeMode) {
                 "light" -> false
@@ -43,7 +54,10 @@ class MainActivity : FragmentActivity() {
                 AngllaryApp(
                     repository = repository,
                     galleryStore = galleryStore,
-                    onThemeModeChange = { themeMode = it }
+                    onThemeModeChange = {
+                        themeMode = it
+                        AppIconManager.syncIconWithTheme(applicationContext, it, systemDark)
+                    }
                 )
             }
         }

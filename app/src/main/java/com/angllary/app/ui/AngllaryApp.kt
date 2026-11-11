@@ -284,7 +284,7 @@ fun AngllaryApp(
         when {
             album.customAlbumId != null -> {
                 val uris = customAlbums.firstOrNull { it.id == album.customAlbumId }?.mediaUris.orEmpty()
-                media.filter { it.uri.toString() in uris }
+                media.filter { it.uri.toString() in uris || "content://media/external/file/${it.id}" in uris }
             }
             album.deviceBucketId != null -> media.filter { it.bucketId == album.deviceBucketId }
             else -> emptyList()
@@ -300,8 +300,11 @@ fun AngllaryApp(
     }
 
     fun updateFavorite(item: MediaItem) {
-        val next = item.uri.toString() !in favoriteUris
-        galleryStore.setFavorite(item.uri.toString(), next)
+        val current = item.uri.toString() in favoriteUris || "content://media/external/file/${item.id}" in favoriteUris
+        galleryStore.setFavorite(item.uri.toString(), !current)
+        if (current) {
+            galleryStore.setFavorite("content://media/external/file/${item.id}", false)
+        }
         favoriteUris = galleryStore.favoriteUris()
     }
 
@@ -332,7 +335,13 @@ fun AngllaryApp(
 
     fun deleteForever(item: MediaItem) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            showMessage(context, context.getString(R.string.system_trash_unavailable))
+            val deleted = repository.deleteDirect(item)
+            if (deleted) {
+                reloadKey++
+                showMessage(context, context.getString(R.string.item_deleted))
+            } else {
+                showMessage(context, context.getString(R.string.action_failed))
+            }
             return
         }
         runCatching {
@@ -403,56 +412,70 @@ fun AngllaryApp(
         Box(
             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
         ) {
-        Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            AnimatedContent(
-                targetState = activePage,
-                transitionSpec = {
-                    if (targetState.ordinal >= initialState.ordinal) {
-                        (fadeIn(tween(170)) + slideInVertically(tween(210)) { it / 5 }) togetherWith
-                            (fadeOut(tween(130)) + slideOutVertically(tween(170)) { -it / 7 })
-                    } else {
-                        (fadeIn(tween(170)) + slideInVertically(tween(210)) { -it / 7 }) togetherWith
-                            (fadeOut(tween(130)) + slideOutVertically(tween(170)) { it / 5 })
-                    }
-                },
-                label = "headerDestinationTransition"
-            ) { page ->
-                if (page == AppPage.HOME) {
-                    AngllaryTopBar(
-                        dateLabel = dateLabel,
-                        onSort = {
-                            sortMode = if (sortMode == "newest") "oldest" else "newest"
-                            galleryStore.setSortMode(sortMode)
-                        },
-                        onGrid = {
-                            gridMode = when (gridMode) {
-                                "compact" -> "comfortable"
-                                "comfortable" -> "large"
-                                else -> "compact"
+        Column(Modifier.fillMaxSize()) {
+            androidx.compose.material3.Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp,
+                shadowElevation = 3.dp,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+            ) {
+                Box(Modifier.statusBarsPadding()) {
+                    AnimatedContent(
+                        targetState = activePage,
+                        transitionSpec = {
+                            if (targetState.ordinal >= initialState.ordinal) {
+                                (fadeIn(tween(170)) + slideInVertically(tween(210)) { it / 5 }) togetherWith
+                                    (fadeOut(tween(130)) + slideOutVertically(tween(170)) { -it / 7 })
+                            } else {
+                                (fadeIn(tween(170)) + slideInVertically(tween(210)) { -it / 7 }) togetherWith
+                                    (fadeOut(tween(130)) + slideOutVertically(tween(170)) { it / 5 })
                             }
-                            galleryStore.setGridMode(gridMode)
                         },
-                        onFavorites = { activePage = AppPage.FAVORITES },
-                        onLockedFolder = {
-                            lockedUnlocked = false
-                            activePage = AppPage.LOCKED
-                        },
-                        onTrash = { activePage = AppPage.TRASH },
-                        onSettings = { activePage = AppPage.SETTINGS }
-                    )
-                } else {
-                    SubPageHeader(
-                        title = when (page) {
-                            AppPage.SEARCH -> stringResource(R.string.search)
-                            AppPage.FAVORITES -> stringResource(R.string.favorites)
-                            AppPage.TRASH -> stringResource(R.string.recently_deleted)
-                            AppPage.LOCKED -> stringResource(R.string.locked_folder)
-                            AppPage.SETTINGS -> stringResource(R.string.settings)
-                            AppPage.ALBUM -> openedAlbum?.name.orEmpty()
-                            AppPage.HOME -> stringResource(R.string.app_name)
-                        },
-                        onBack = { navigateBack() }
-                    )
+                        label = "headerDestinationTransition"
+                    ) { page ->
+                        if (page == AppPage.HOME) {
+                            AngllaryTopBar(
+                                dateLabel = dateLabel,
+                                onSort = {
+                                    sortMode = if (sortMode == "newest") "oldest" else "newest"
+                                    galleryStore.setSortMode(sortMode)
+                                },
+                                onGrid = {
+                                    gridMode = when (gridMode) {
+                                        "compact" -> "comfortable"
+                                        "comfortable" -> "large"
+                                        else -> "compact"
+                                    }
+                                    galleryStore.setGridMode(gridMode)
+                                },
+                                onFavorites = { activePage = AppPage.FAVORITES },
+                                onLockedFolder = {
+                                    lockedUnlocked = false
+                                    activePage = AppPage.LOCKED
+                                },
+                                onTrash = { activePage = AppPage.TRASH },
+                                onSettings = { activePage = AppPage.SETTINGS }
+                            )
+                        } else {
+                            SubPageHeader(
+                                title = when (page) {
+                                    AppPage.SEARCH -> stringResource(R.string.search)
+                                    AppPage.FAVORITES -> stringResource(R.string.favorites)
+                                    AppPage.TRASH -> stringResource(R.string.recently_deleted)
+                                    AppPage.LOCKED -> stringResource(R.string.locked_folder)
+                                    AppPage.SETTINGS -> stringResource(R.string.settings)
+                                    AppPage.ALBUM -> openedAlbum?.name.orEmpty()
+                                    AppPage.HOME -> stringResource(R.string.app_name)
+                                },
+                                onBack = { navigateBack() }
+                            )
+                        }
+                    }
                 }
             }
 
@@ -543,11 +566,11 @@ fun AngllaryApp(
 
                         AppPage.FAVORITES -> SimpleAlbumScreen(
                             title = stringResource(R.string.favorites),
-                            media = orderedMedia.filter { it.uri.toString() in favoriteUris },
+                            media = orderedMedia.filter { it.uri.toString() in favoriteUris || "content://media/external/file/${it.id}" in favoriteUris },
                             favoriteUris = favoriteUris,
                             minCellSize = gridCellSize,
                             onDateChanged = {},
-                            onMediaClick = { openViewer(it, orderedMedia.filter { it.uri.toString() in favoriteUris }) }
+                            onMediaClick = { openViewer(it, orderedMedia.filter { m -> m.uri.toString() in favoriteUris || "content://media/external/file/${m.id}" in favoriteUris }) }
                         )
 
                         AppPage.TRASH -> TrashScreen(
@@ -663,7 +686,7 @@ fun AngllaryApp(
         MediaViewer(
             media = viewerItems,
             initialIndex = currentViewerIndex,
-            isFavorite = { it.uri.toString() in favoriteUris },
+            isFavorite = { it.uri.toString() in favoriteUris || "content://media/external/file/${it.id}" in favoriteUris },
             onToggleFavorite = { updateFavorite(it) },
             onTrash = {
                 closeViewerAfterTrash = true
@@ -816,7 +839,7 @@ fun AngllaryApp(
 private fun SubPageHeader(title: String, onBack: () -> Unit) {
     val backClick = rememberHapticClick(onBack)
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 7.dp),
+        modifier = Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {

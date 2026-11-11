@@ -75,9 +75,13 @@ class MediaStoreRepository(private val resolver: ContentResolver) {
                     val mediaType = cursor.getInt(typeCol)
                     val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
                     val id = cursor.getLong(idCol)
+                    val itemUri = ContentUris.withAppendedId(
+                        if (isVideo) MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        id
+                    )
                     output += MediaItem(
                         id = id,
-                        uri = ContentUris.withAppendedId(collection, id),
+                        uri = itemUri,
                         displayName = cursor.getString(nameCol).orEmpty(),
                         mimeType = if (mimeCol >= 0) cursor.getString(mimeCol).orEmpty() else "",
                         dateModifiedMillis = cursor.getLong(modifiedCol) * 1000L,
@@ -101,13 +105,30 @@ class MediaStoreRepository(private val resolver: ContentResolver) {
         return output
     }
 
+    fun toMediaUri(item: MediaItem): Uri {
+        val base = if (item.isVideo) {
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        } else {
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        }
+        return ContentUris.withAppendedId(base, item.id)
+    }
+
     fun createTrashRequest(items: List<MediaItem>, trash: Boolean): PendingIntent? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || items.isEmpty()) return null
-        return MediaStore.createTrashRequest(resolver, items.map { it.uri }, trash)
+        return MediaStore.createTrashRequest(resolver, items.map { toMediaUri(it) }, trash)
     }
 
     fun createDeleteRequest(items: List<MediaItem>): PendingIntent? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || items.isEmpty()) return null
-        return MediaStore.createDeleteRequest(resolver, items.map { it.uri })
+        return MediaStore.createDeleteRequest(resolver, items.map { toMediaUri(it) })
+    }
+
+    fun deleteDirect(item: MediaItem): Boolean {
+        return try {
+            resolver.delete(toMediaUri(item), null, null) > 0
+        } catch (_: Exception) {
+            false
+        }
     }
 }
