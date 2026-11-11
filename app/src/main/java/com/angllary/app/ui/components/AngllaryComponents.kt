@@ -376,7 +376,6 @@ private fun DockTab(
     }
 }
 
-@Composable
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MediaGrid(
