@@ -7,7 +7,11 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.CipherInputStream
@@ -28,6 +32,11 @@ class LockedFolderStore(private val context: Context) {
     private val preferences = context.getSharedPreferences("angllary_locked_folder", Context.MODE_PRIVATE)
     private val directory = File(context.noBackupFilesDir, "locked_media").apply { mkdirs() }
     private val keyAlias = "angllary.locked.media.v1"
+
+    init {
+        // Remove decrypted previews left behind if the process was terminated while the viewer was open.
+        context.cacheDir.listFiles()?.filter { it.name.startsWith("locked_") }?.forEach { it.delete() }
+    }
 
     fun entries(): List<LockedEntry> {
         val json = preferences.getString("entries", "[]") ?: "[]"
@@ -77,6 +86,116 @@ class LockedFolderStore(private val context: Context) {
         }
         return Uri.fromFile(preview)
     }
+
+    @Synchronized
+    fun exportBackup(destination: Uri): Int {
+        val current = entries()
+        val output = context.contentResolver.openOutputStream(destination, "w")
+            ?: error("Could not create the backup file.")
+        ZipOutputStream(output.buffered()).use { zip ->
+            val manifest = JSONArray()
+            current.forEach { entry ->
+                manifest.put(
+                    JSONObject()
+                        .put("id", entry.id)
+                        .put("name", entry.displayName)
+                        .put("mime", entry.mimeType)
+                        .put("size", entry.encryptedSize)
+                        .put("iv", entry.iv)
+                )
+            }
+            zip.putNextEntry(ZipEntry("manifest.json"))
+            zip.write(manifest.toString().toByteArray(Charsets.UTF_8))
+            zip.closeEntry()
+
+            current.forEach { entry ->
+                val encryptedFile = File(directory, entry.id + ".bin")
+                if (!encryptedFile.exists()) return@forEach
+                zip.putNextEntry(ZipEntry("locked/${entry.id}.bin"))
+                encryptedFile.inputStream().buffered().use { input -> input.copyTo(zip, 64 * 1024) }
+                zip.closeEntry()
+            }
+        }
+        return current.size
+    }
+
+    @Synchronized
+    fun restoreBackup(source: Uri): Int {
+        val staging = File(context.cacheDir, "locked_restore_${UUID.randomUUID()}").apply { mkdirs() }
+        try {
+            var manifestBytes: ByteArray? = null
+            var restoredBytes = 0L
+            val maximumArchiveBytes = 8L * 1024L * 1024L * 1024L
+
+            val input = context.contentResolver.openInputStream(source)
+                ?: error("Could not open the backup file.")
+            ZipInputStream(input.buffered()).use { zip ->
+                while (true) {
+                    val entry = zip.nextEntry ?: break
+                    when {
+                        entry.name == "manifest.json" -> {
+                            val buffer = ByteArrayOutputStream()
+                            zip.copyTo(buffer, 16 * 1024)
+                            if (buffer.size() > 2 * 1024 * 1024) error("Backup manifest is too large.")
+                            manifestBytes = buffer.toByteArray()
+                        }
+                        entry.name.startsWith("locked/") &&
+                            entry.name.matches(Regex("locked/[0-9a-fA-F-]{36}\\.bin")) -> {
+                            val id = entry.name.removePrefix("locked/").removeSuffix(".bin")
+                            val stagedFile = File(staging, "$id.bin")
+                            stagedFile.outputStream().buffered().use { output ->
+                                val buffer = ByteArray(64 * 1024)
+                                while (true) {
+                                    val count = zip.read(buffer)
+                                    if (count <= 0) break
+                                    restoredBytes += count
+                                    if (restoredBytes > maximumArchiveBytes) error("Backup exceeds the size limit.")
+                                    output.write(buffer, 0, count)
+                                }
+                            }
+                        }
+                        else -> {
+                            // Ignore unrecognised entries; paths are never extracted directly.
+                            while (zip.read() != -1) Unit
+                        }
+                    }
+                    zip.closeEntry()
+                }
+            }
+
+            val rawManifest = manifestBytes ?: error("This is not a valid Angllary backup.")
+            val manifest = JSONArray(String(rawManifest, Charsets.UTF_8))
+            val recovered = ArrayList<LockedEntry>()
+            for (index in 0 until manifest.length()) {
+                val json = manifest.getJSONObject(index)
+                val id = json.getString("id")
+                if (!id.matches(Regex("[0-9a-fA-F-]{36}"))) continue
+                val stagedFile = File(staging, "$id.bin")
+                if (!stagedFile.isFile) continue
+                recovered += LockedEntry(
+                    id = id,
+                    displayName = json.optString("name", "Private media"),
+                    mimeType = json.optString("mime", "application/octet-stream"),
+                    encryptedSize = json.optLong("size", stagedFile.length()),
+                    iv = json.getString("iv")
+                )
+            }
+            if (recovered.isEmpty() && manifest.length() > 0) {
+                error("No valid encrypted media was found in this backup.")
+            }
+
+            recovered.forEach { entry ->
+                stagedFileFor(staging, entry.id).copyTo(File(directory, entry.id + ".bin"), overwrite = true)
+            }
+            val replacedIds = recovered.map { it.id }.toSet()
+            saveEntries(entries().filterNot { it.id in replacedIds } + recovered)
+            return recovered.size
+        } finally {
+            staging.deleteRecursively()
+        }
+    }
+
+    private fun stagedFileFor(staging: File, id: String): File = File(staging, "$id.bin")
 
     fun clearPreview(entry: LockedEntry) {
         File(context.cacheDir, "locked_${entry.id}.${extensionFor(entry.mimeType, entry.displayName)}").delete()
