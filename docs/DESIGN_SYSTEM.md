@@ -2,90 +2,111 @@
 
 ## Product feel
 
-Angllary is a quiet, media-first gallery. Images and video are the content; navigation and actions should feel like a light layer over the library rather than a set of heavy app chrome bars.
+Angllary is a quiet, media-first gallery. Content is the focal point; navigation and actions are a light, consistent layer rather than heavy app chrome.
 
-- No ad surfaces, account prompts, social feed, or AI upsell.
-- No saturated accent colour, coloured tints, or decorative gradients.
-- Light and dark themes use warm neutral values rather than pure white and pure black.
-- Controls are compact, consistently aligned, and remain easy to reach.
+- No advertisements, account prompts, social feed or AI upsell.
+- No hue-based accents, coloured tints or decorative gradients.
+- Light and dark themes are neutral greys with near-white and near-black anchors.
+- Controls share a defined height, corner radius, spacing and alignment system.
+- Motion communicates navigation, feedback and loading; it is never decorative for its own sake.
 
 ## Brand and typography
 
 - Name: Angllary.
 - Tagline: Your photos. Your space.
 - Initial UI language: English; strings are resource-backed for future localization.
-- Google Sans Flex is requested through Android's downloadable-font provider. Android sans-serif remains the fallback when the font provider is unavailable.
+- Google Sans Flex is requested through Android's downloadable-font provider. Android sans-serif remains the fallback.
 
-## Colour tokens
+## Neutral colour system
+
+All colour tokens use equal red, green and blue channel values. This is intentional: it prevents teal, green or warm casts in surfaces, text and controls.
 
 | Token | Light | Dark |
 |---|---|---|
-| Canvas | #F2F1ED | #151514 |
-| Surface | #FAF9F6 | #20201E |
-| Secondary surface | #E8E7E2 | #2B2B29 |
-| Primary text | #242320 | #F0EFEA |
-| Secondary text | #77766F | #A6A59F |
-| Divider | #D9D8D2 | #393936 |
+| Canvas | #F4F4F4 | #111111 |
+| Surface | #FAFAFA | #1B1B1B |
+| Secondary surface | #EEEEEE | #242424 |
+| Raised surface | #E5E5E5 | #303030 |
+| Primary text | #171717 | #F4F4F4 |
+| Secondary text | #737373 | #A3A3A3 |
+| Divider | #D7D7D7 | #3A3A3A |
 
-Viewer media is presented on a dark neutral canvas in either theme to keep the image itself visually prominent. Monochrome top and bottom vignettes are used only where controls need contrast.
+Viewer content uses a consistent dark-neutral viewing canvas in both themes. Media overlays use monochrome gradients only to preserve text and control contrast.
 
-## Layout and spacing
+## Shape and component system
 
-- Main horizontal inset: 20dp.
-- Gallery grid inset: 5dp.
-- Thumbnail gap: 4dp, both horizontally and vertically.
-- Thumbnail corners: approximately 12dp.
-- Album cards and sheets use 18–28dp corner radii.
-- Header: brand at left, date label optically centred, overflow at right.
-- Footer: separate Search control at lower-left, All/Albums pill aligned to lower-right.
-- No solid, full-width bottom navigation shelf.
+- Floating dock: one unified 58dp-tall container with 25dp outer radius.
+- Dock segments: equal 48dp hit area and 18dp inner radius.
+- Primary compact actions: 42–48dp height, 12–14dp corner radius.
+- Search field: 16dp corner radius.
+- Media tiles: 13dp corner radius and 4dp gaps.
+- Album covers: 15dp corner radius.
+- Settings groups: 16dp corner radius.
+- Main horizontal inset: 20dp; gallery inset: 5dp.
+
+The brand and date in the top bar are typographic elements, not separate competing pills. Search and All/Albums belong to one dock with a shared height, surface, border and alignment.
+
+## Navigation and interaction
+
+- Main header: brand at left, scroll-aware date centred, overflow menu at right.
+- Bottom dock: Search action, divider, All and Albums.
+- Horizontal swipes switch All/Albums. The selected destination and scroll positions survive switching and opening Search.
+- Search is a dedicated destination, not a modal dialog.
+- System predictive back moves the destination surface with the back gesture.
+- The viewer pages horizontally through photos and videos. Video paging is detected on the video canvas without intentionally consuming player-control touches.
 
 ## Motion direction
 
-Motion should clarify navigation and state changes, never become decoration.
+Motion is short, calm and spring-led where physical feedback helps.
 
-- Tab selection uses a short spring between neutral surfaces.
-- Screen changes use restrained fade transitions.
-- Viewer controls and details use short fade/vertical-slide transitions.
-- Media paging remains gesture-led and direct.
-- Avoid long autoplay loops, large parallax movement, and heavy overshoot.
+- Tab selection uses a restrained spring between neutral surfaces.
+- Press feedback scales media tiles and dock actions by only a few percent.
+- Page navigation uses directional slide and fade transitions.
+- Header and dock transition with the destination instead of appearing/disappearing abruptly.
+- Viewer controls use short fade/vertical-slide transitions; viewer entry/exit uses a restrained fade/scale.
+- Loading uses a soft skeleton grid and a low-contrast video-thumbnail pulse.
+- Reduced and disabled motion preferences should be respected as accessibility work is expanded.
 
-The interaction vocabulary was informed by the component and transition patterns explored in Skiper UI and Figma prototyping, then adapted to native Compose rather than copying web code or motion values.
+Motion references were explored through Figma Smart Animate concepts and Skiper UI interaction patterns, then adapted to native Compose APIs rather than copying web implementations. For platform-specific behaviour, Compose transitions, gestures and predictive-back APIs are the implementation reference.
 
 ## Main gallery
 
-- Adaptive staggered grid respects media aspect ratios and uses cached video-frame thumbnails.
+- Adaptive staggered grid preserves media aspect ratios.
+- Video thumbnails first try MediaStore's thumbnail provider, then fall back to MediaMetadataRetriever.
+- Video frames are held in a bounded memory cache.
 - Scroll position updates the display-only date label.
-- Sort and grid controls are in the overflow menu.
-- Search opens as a local overlay and filters filenames, albums, folder paths, dates, MIME types, media type and favourites.
-- The bottom capsule contains only All and Albums.
+- Sort and grid density remain in the overflow menu.
+- Search filters filenames, albums, folder paths, dates, MIME types, media types and favourites locally.
+- The bottom dock is shared and geometrically consistent.
 
-## Albums
+## Albums and Search
 
 - Device albums are derived from MediaStore folders.
-- Custom albums are virtual collections of MediaStore URIs; adding or removing an item does not duplicate the original file.
-- Album cover and item count are derived from current library content.
-- Smart/AI albums are not part of this release.
+- Custom albums are virtual collections of MediaStore URIs; they do not duplicate original files.
+- Album cards share one aspect ratio, corner shape and pressed-state animation.
+- All/Albums scroll states are held above the animated destination so they can be restored.
+- Search is a dedicated local page with media filters and results that reuse the same image/video thumbnail component.
 
 ## Viewer and editing
 
 - Full-screen horizontal media pager.
 - Photos support pinch zoom and pan.
-- Videos use Media3 playback controls.
-- Viewer actions include share, favourite, details, edit, trash, add/remove from custom album, and copy to Locked Folder.
-- Details only show metadata available from Android.
-- Photo and video edits are non-destructive exports; the source stays unchanged.
+- Videos use Media3 playback controls and allow horizontal page swipes from the playback canvas.
+- Viewer actions include share, favourite, details, edit, trash, add/remove from custom album and copy to Locked Folder.
+- Metadata only shows fields available from Android.
+- Photo/video edits are non-destructive exports; source media remains unchanged.
 
 ## Privacy surfaces
 
-- Recently Deleted uses Android system trash and its consent/confirmation flow where supported.
+- Recently Deleted uses Android system trash and its confirmation flow where supported.
 - Locked Folder uses Android system authentication and an AES-GCM key held by Android Keystore.
 - Locked media is stored as encrypted app-private copies. Decrypted preview cache is cleared on app start and when the viewer closes.
-- Backup archives contain only the encrypted media and metadata; the Keystore key is not exported. Restore is limited to the original installation that still has that key.
+- Backup archives contain encrypted media and metadata, never the Keystore key. Restore is limited to the original installation that still has that key.
 
 ## Accessibility
 
 - Touch targets remain at least 48dp where practical.
 - Icons have content descriptions.
 - Text respects system font scaling.
-- Animations are short and used to communicate state changes.
+- Haptics are limited to clear interaction confirmations.
+- Animations are short and tied to state changes.
