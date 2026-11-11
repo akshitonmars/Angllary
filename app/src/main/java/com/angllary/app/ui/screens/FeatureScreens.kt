@@ -34,6 +34,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Check
@@ -492,7 +494,7 @@ private fun GalleryLoadingGrid() {
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        items(12) { index ->
+        gridItems(count = 12) { index ->
             val height = if (index % 3 == 0) 230.dp else if (index % 3 == 1) 170.dp else 195.dp
             Box(
                 Modifier.fillMaxWidth().height(height)
