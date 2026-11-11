@@ -3,6 +3,9 @@ package com.angllary.app.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -21,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.animateContentSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -72,6 +76,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
@@ -146,6 +153,7 @@ fun AlbumsScreen(
     onEditCustomAlbum: (CustomAlbum) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val createAlbumClick = rememberHapticClick(onCreateAlbum)
     val groups = remember(media) {
         media.filter { it.albumName.isNotBlank() }
             .groupBy { it.bucketId.ifBlank { it.albumName } }
@@ -168,9 +176,14 @@ fun AlbumsScreen(
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
-                Surface(onClick = onCreateAlbum, shape = CircleShape, color = MaterialTheme.colorScheme.onSurface) {
+                Surface(
+                    onClick = createAlbumClick,
+                    shape = RoundedCornerShape(13.dp),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.height(42.dp)
+                ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 13.dp, vertical = 9.dp),
+                        modifier = Modifier.padding(horizontal = 13.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
@@ -203,14 +216,15 @@ fun AlbumsScreen(
                             onClick = { onOpenCustomAlbum(album.id, album.name) },
                             trailing = {
                                 var expanded by remember(album.id) { mutableStateOf(false) }
+                                val openAlbumMenu = rememberHapticClick { expanded = true }
                                 Box {
-                                    IconButton(onClick = { expanded = true }, modifier = Modifier.size(32.dp)) {
+                                    IconButton(onClick = openAlbumMenu, modifier = Modifier.size(36.dp)) {
                                         Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.album_options), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                                     }
                                     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                         DropdownMenuItem(
                                             text = { Text(stringResource(R.string.manage_album)) },
-                                            onClick = { expanded = false; onEditCustomAlbum(album) }
+                                            onClick = rememberHapticClick { expanded = false; onEditCustomAlbum(album) }
                                         )
                                     }
                                 }
@@ -265,12 +279,21 @@ private fun AlbumCard(
     onClick: () -> Unit,
     trailing: (@Composable () -> Unit)? = null
 ) {
+    val albumClick = rememberHapticClick(onClick)
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (pressed) 0.975f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(stiffness = 650f, dampingRatio = 0.78f),
+        label = "albumCardPress"
+    )
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Box(
             modifier = Modifier.fillMaxWidth().aspectRatio(1.08f)
-                .clip(RoundedCornerShape(17.dp))
+                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .clip(RoundedCornerShape(15.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .clickable(onClick = onClick)
+                .clickable(interactionSource = interactionSource, indication = null, onClick = albumClick)
         ) {
             if (cover != null) {
                 MediaThumbnail(item = cover, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -576,7 +599,7 @@ fun LockedFolderScreen(
                 Text(stringResource(R.string.locked_folder_subtitle), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (unlocked) {
-                Surface(onClick = onImport, shape = CircleShape, color = MaterialTheme.colorScheme.onSurface) {
+                Surface(onClick = rememberHapticClick(onImport), shape = RoundedCornerShape(13.dp), color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.height(42.dp)) {
                     Row(Modifier.padding(horizontal = 13.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Icon(Icons.Outlined.Add, contentDescription = null, tint = MaterialTheme.colorScheme.surface, modifier = Modifier.size(16.dp))
                         Text(stringResource(R.string.add_media), color = MaterialTheme.colorScheme.surface, style = MaterialTheme.typography.labelLarge)
@@ -591,10 +614,10 @@ fun LockedFolderScreen(
                 verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onBackupExport, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(onClick = rememberHapticClick(onBackupExport), shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f).height(42.dp)) {
                         Text(stringResource(R.string.export_backup))
                     }
-                    OutlinedButton(onClick = onBackupRestore, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(onClick = rememberHapticClick(onBackupRestore), shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f).height(42.dp)) {
                         Text(stringResource(R.string.restore_backup))
                     }
                 }
@@ -722,8 +745,12 @@ fun SettingsScreen(
 private fun SettingsGroup(title: String, content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium)
-        Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface) {
-            Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) { content() }
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
+        ) {
+            Column(Modifier.animateContentSize().padding(horizontal = 15.dp, vertical = 7.dp)) { content() }
         }
     }
 }
@@ -731,11 +758,17 @@ private fun SettingsGroup(title: String, content: @Composable () -> Unit) {
 @Composable
 private fun SettingsChoice(label: String, selected: Boolean, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+        Modifier.fillMaxWidth().clickable(onClick = rememberHapticClick(onClick)).padding(vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        if (selected) Icon(Icons.Outlined.Check, contentDescription = stringResource(R.string.selected), tint = MaterialTheme.colorScheme.onSurface)
+        AnimatedVisibility(
+            visible = selected,
+            enter = fadeIn(tween(140)) + scaleIn(initialScale = 0.7f, animationSpec = tween(170)),
+            exit = fadeOut(tween(100)) + scaleOut(targetScale = 0.8f, animationSpec = tween(120))
+        ) {
+            Icon(Icons.Outlined.Check, contentDescription = stringResource(R.string.selected), tint = MaterialTheme.colorScheme.onSurface)
+        }
     }
 }
 
