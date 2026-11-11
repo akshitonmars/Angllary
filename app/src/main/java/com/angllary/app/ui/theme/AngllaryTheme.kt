@@ -124,7 +124,7 @@ private val AngllaryShapes = Shapes(
     small = RoundedCornerShape(12.dp),
     medium = RoundedCornerShape(16.dp),
     large = RoundedCornerShape(20.dp),
-    extraLarge = RoundedCornerShape(26.dp)
+    extraLarge = RoundedCornerShape(18.dp)
 )
 
 data class ExtendedColors(
