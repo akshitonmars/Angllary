@@ -9,8 +9,8 @@ android {
         applicationId = "com.angllary.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.4.1"
+        versionCode = 6
+        versionName = "0.4.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
@@ -47,7 +47,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.coil.compose)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
