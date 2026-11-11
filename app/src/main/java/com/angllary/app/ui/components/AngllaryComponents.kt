@@ -209,12 +209,12 @@ fun AngllaryBottomBar(
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            modifier = Modifier.widthIn(min = 272.dp, max = 316.dp),
-            shape = RoundedCornerShape(25.dp),
-            color = scheme.surface,
+            modifier = Modifier.widthIn(min = 284.dp, max = 332.dp),
+            shape = RoundedCornerShape(50.dp),
+            color = scheme.surfaceContainerHigh,
             contentColor = scheme.onSurface,
-            border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.8f)),
-            shadowElevation = 5.dp
+            border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.95f)),
+            shadowElevation = 14.dp
         ) {
             Row(
                 modifier = Modifier.height(58.dp).padding(5.dp),
@@ -306,7 +306,7 @@ private fun DockTab(
         modifier = modifier
             .height(48.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(RoundedCornerShape(18.dp))
+             .clip(RoundedCornerShape(50.dp))
             .background(background)
             .clickable(
                 interactionSource = source,
@@ -347,7 +347,7 @@ fun MediaGrid(
         columns = StaggeredGridCells.Adaptive(minSize = minCellSize),
         state = state,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 5.dp, end = 5.dp, top = 4.dp, bottom = 14.dp),
+        contentPadding = PaddingValues(start = 5.dp, end = 5.dp, top = 4.dp, bottom = 124.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalItemSpacing = 4.dp
     ) {

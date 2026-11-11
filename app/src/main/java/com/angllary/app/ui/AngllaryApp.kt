@@ -36,9 +36,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.MaterialTheme
@@ -55,6 +57,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -87,6 +90,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -116,6 +121,23 @@ fun AngllaryApp(
     var lockedEntries by remember { mutableStateOf(lockedStore.entries()) }
 
     var selectedTab by remember { mutableStateOf(MainTab.ALL) }
+    val homeTabPagerState = rememberPagerState(
+        initialPage = if (selectedTab == MainTab.ALBUMS) 1 else 0
+    ) { 2 }
+    LaunchedEffect(selectedTab) {
+        val targetPage = if (selectedTab == MainTab.ALBUMS) 1 else 0
+        if (homeTabPagerState.currentPage != targetPage) {
+            homeTabPagerState.animateScrollToPage(targetPage)
+        }
+    }
+    LaunchedEffect(homeTabPagerState) {
+        snapshotFlow { homeTabPagerState.currentPage }
+            .distinctUntilChanged()
+            .collect { page ->
+                val tab = if (page == 0) MainTab.ALL else MainTab.ALBUMS
+                if (selectedTab != tab) selectedTab = tab
+            }
+    }
     val homeGridState = rememberLazyStaggeredGridState()
     val albumsListState = rememberLazyListState()
     var activePage by remember { mutableStateOf(AppPage.HOME) }
@@ -365,9 +387,12 @@ fun AngllaryApp(
         }
     }
 
-    Box(
-        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalContentColor provides MaterialTheme.colorScheme.onBackground
     ) {
+        Box(
+            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+        ) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             AnimatedContent(
                 targetState = activePage,
@@ -456,82 +481,46 @@ fun AngllaryApp(
                 ) { page ->
                     when (page) {
                         AppPage.HOME -> {
-                            var horizontalDrag by remember { mutableFloatStateOf(0f) }
-                            val haptic = rememberHapticClick { }
-                            Box(
-                                Modifier.fillMaxSize().pointerInput(selectedTab) {
-                                    horizontalDrag = 0f
-                                    detectHorizontalDragGestures(
-                                        onHorizontalDrag = { change, dragAmount ->
-                                            horizontalDrag += dragAmount
-                                            change.consume()
-                                        },
-                                        onDragEnd = {
-                                            when {
-                                                horizontalDrag < -64f && selectedTab == MainTab.ALL -> {
-                                                    haptic()
-                                                    selectedTab = MainTab.ALBUMS
-                                                }
-                                                horizontalDrag > 64f && selectedTab == MainTab.ALBUMS -> {
-                                                    haptic()
-                                                    selectedTab = MainTab.ALL
-                                                }
-                                            }
-                                            horizontalDrag = 0f
-                                        },
-                                        onDragCancel = { horizontalDrag = 0f }
+                            HorizontalPager(
+                                state = homeTabPagerState,
+                                modifier = Modifier.fillMaxSize(),
+                                beyondViewportPageCount = 1,
+                                key = { it }
+                            ) { pageIndex ->
+                                when (if (pageIndex == 0) MainTab.ALL else MainTab.ALBUMS) {
+                                    MainTab.ALL -> GalleryScreen(
+                                        media = orderedMedia,
+                                        favoriteUris = favoriteUris,
+                                        hasPermission = hasPermission,
+                                        isLoading = isLoading,
+                                        minCellSize = gridCellSize,
+                                        onRequestPermission = { permissionLauncher.launch(mediaPermissions()) },
+                                        onDateChanged = { dateLabel = formatDateLabel(it.displayDateMillis, context) },
+                                        onMediaClick = { openViewer(it, orderedMedia) },
+                                        gridState = homeGridState
                                     )
-                                }
-                            ) {
-                                AnimatedContent(
-                                    targetState = selectedTab,
-                                    transitionSpec = {
-                                        val forward = targetState == MainTab.ALBUMS
-                                        if (forward) {
-                                            (slideInHorizontally(tween(220)) { it / 18 } + fadeIn(tween(180))) togetherWith
-                                                (slideOutHorizontally(tween(180)) { -it / 24 } + fadeOut(tween(140)))
-                                        } else {
-                                            (slideInHorizontally(tween(220)) { -it / 18 } + fadeIn(tween(180))) togetherWith
-                                                (slideOutHorizontally(tween(180)) { it / 24 } + fadeOut(tween(140)))
-                                        }
-                                    },
-                                    label = "homeTabTransition"
-                                ) { tab ->
-                                    when (tab) {
-                                        MainTab.ALL -> GalleryScreen(
-                                            media = orderedMedia,
-                                            favoriteUris = favoriteUris,
-                                            hasPermission = hasPermission,
-                                            isLoading = isLoading,
-                                            minCellSize = gridCellSize,
-                                            onRequestPermission = { permissionLauncher.launch(mediaPermissions()) },
-                                            onDateChanged = { dateLabel = formatDateLabel(it.displayDateMillis, context) },
-                                            onMediaClick = { openViewer(it, orderedMedia) },
-                                            gridState = homeGridState
-                                        )
-                                        MainTab.ALBUMS -> AlbumsScreen(
-                                            media = orderedMedia,
-                                            customAlbums = customAlbums,
-                                            hasPermission = hasPermission,
-                                            onCreateAlbum = {
-                                                newAlbumName = ""
-                                                showNewAlbum = true
-                                            },
-                                            onOpenDeviceAlbum = { id, name ->
-                                                openedAlbum = OpenAlbum(name = name, deviceBucketId = id)
-                                                activePage = AppPage.ALBUM
-                                            },
-                                            onOpenCustomAlbum = { id, name ->
-                                                openedAlbum = OpenAlbum(name = name, customAlbumId = id)
-                                                activePage = AppPage.ALBUM
-                                            },
-                                            onEditCustomAlbum = { album ->
-                                                renameAlbumValue = album.name
-                                                editAlbumTarget = album
-                                            },
-                                            listState = albumsListState
-                                        )
-                                    }
+                                    MainTab.ALBUMS -> AlbumsScreen(
+                                        media = orderedMedia,
+                                        customAlbums = customAlbums,
+                                        hasPermission = hasPermission,
+                                        onCreateAlbum = {
+                                            newAlbumName = ""
+                                            showNewAlbum = true
+                                        },
+                                        onOpenDeviceAlbum = { id, name ->
+                                            openedAlbum = OpenAlbum(name = name, deviceBucketId = id)
+                                            activePage = AppPage.ALBUM
+                                        },
+                                        onOpenCustomAlbum = { id, name ->
+                                            openedAlbum = OpenAlbum(name = name, customAlbumId = id)
+                                            activePage = AppPage.ALBUM
+                                        },
+                                        onEditCustomAlbum = { album ->
+                                            renameAlbumValue = album.name
+                                            editAlbumTarget = album
+                                        },
+                                        listState = albumsListState
+                                    )
                                 }
                             }
                         }
@@ -636,21 +625,24 @@ fun AngllaryApp(
                     }
                 }
             }
-            AnimatedVisibility(
-                visible = activePage == AppPage.HOME,
-                enter = fadeIn(tween(170)) + slideInVertically(tween(220)) { it / 2 },
-                exit = fadeOut(tween(130)) + slideOutVertically(tween(170)) { it / 2 }
-            ) {
-                AngllaryBottomBar(
-                    selectedTab = selectedTab,
-                    onTabSelected = { selectedTab = it },
-                    onSearch = { activePage = AppPage.SEARCH },
-                    modifier = Modifier.navigationBarsPadding()
-                )
-            }
         }
 
-
+        AnimatedVisibility(
+            visible = activePage == AppPage.HOME,
+            enter = fadeIn(tween(220)) + slideInVertically(tween(300)) { it / 2 },
+            exit = fadeOut(tween(150)) + slideOutVertically(tween(220)) { it / 2 },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 10.dp)
+        ) {
+            AngllaryBottomBar(
+                selectedTab = selectedTab,
+                onTabSelected = { selectedTab = it },
+                onSearch = { activePage = AppPage.SEARCH }
+            )
+        }
+    }
     }
 
     val currentViewerIndex = viewerIndex

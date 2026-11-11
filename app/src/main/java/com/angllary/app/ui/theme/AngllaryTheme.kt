@@ -24,23 +24,23 @@ import androidx.compose.ui.unit.sp
  * green or warm colour casts from appearing in surfaces and text.
  */
 private object Palette {
-    val Canvas = Color(0xFFF4F4F4)
+    val Canvas = Color(0xFFFFFFFF)
     val Surface = Color(0xFFFFFFFF)
-    val SurfaceLow = Color(0xFFEEEEEE)
-    val SurfaceHigh = Color(0xFFE5E5E5)
-    val Ink = Color(0xFF171717)
-    val InkSoft = Color(0xFF3A3A3A)
-    val Muted = Color(0xFF737373)
-    val Divider = Color(0xFFD7D7D7)
+    val SurfaceLow = Color(0xFFF4F4F4)
+    val SurfaceHigh = Color(0xFFEAEAEA)
+    val Ink = Color(0xFF000000)
+    val InkSoft = Color(0xFF333333)
+    val Muted = Color(0xFF666666)
+    val Divider = Color(0xFFD6D6D6)
 
-    val CanvasDark = Color(0xFF111111)
-    val SurfaceDark = Color(0xFF1B1B1B)
-    val SurfaceLowDark = Color(0xFF242424)
-    val SurfaceHighDark = Color(0xFF303030)
-    val InkDark = Color(0xFFF4F4F4)
-    val InkSoftDark = Color(0xFFD8D8D8)
-    val MutedDark = Color(0xFFA3A3A3)
-    val DividerDark = Color(0xFF3A3A3A)
+    val CanvasDark = Color(0xFF000000)
+    val SurfaceDark = Color(0xFF111111)
+    val SurfaceLowDark = Color(0xFF191919)
+    val SurfaceHighDark = Color(0xFF242424)
+    val InkDark = Color(0xFFFFFFFF)
+    val InkSoftDark = Color(0xFFE5E5E5)
+    val MutedDark = Color(0xFFB3B3B3)
+    val DividerDark = Color(0xFF363636)
 
     val Error = Color(0xFF666666)
 }
@@ -66,7 +66,7 @@ private val LightColors = lightColorScheme(
     surfaceContainerLow = Palette.Canvas,
     surfaceContainer = Palette.SurfaceLow,
     surfaceContainerHigh = Palette.SurfaceHigh,
-    surfaceContainerHighest = Color(0xFFDDDDDD),
+    surfaceContainerHighest = Color(0xFFE0E0E0),
     outline = Palette.Divider,
     outlineVariant = Palette.Divider,
     error = Palette.Error,
@@ -92,7 +92,7 @@ private val DarkColors = darkColorScheme(
     surfaceContainerLow = Palette.SurfaceDark,
     surfaceContainer = Palette.SurfaceLowDark,
     surfaceContainerHigh = Palette.SurfaceHighDark,
-    surfaceContainerHighest = Color(0xFF383838),
+    surfaceContainerHighest = Color(0xFF303030),
     outline = Palette.DividerDark,
     outlineVariant = Palette.DividerDark,
     error = Palette.MutedDark,
@@ -137,8 +137,8 @@ data class ExtendedColors(
 
 val LocalExtendedColors = staticCompositionLocalOf {
     ExtendedColors(
-        viewerBackground = Color(0xFF101010),
-        viewerSurface = Color(0xFF242424),
+        viewerBackground = Color(0xFF000000),
+        viewerSurface = Color(0xFF171717),
         viewerOnSurface = Color(0xFFF4F4F4),
         viewerMuted = Color(0xFFB0B0B0),
         scrim = Color(0x99000000)
@@ -154,8 +154,8 @@ private val LightExtended = ExtendedColors(
 )
 
 private val DarkExtended = ExtendedColors(
-    viewerBackground = Color(0xFF090909),
-    viewerSurface = Color(0xFF202020),
+    viewerBackground = Color(0xFF000000),
+    viewerSurface = Color(0xFF171717),
     viewerOnSurface = Color(0xFFF4F4F4),
     viewerMuted = Color(0xFFA3A3A3),
     scrim = Color(0x99000000)

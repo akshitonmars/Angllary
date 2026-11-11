@@ -164,7 +164,7 @@ fun AlbumsScreen(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 26.dp),
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 124.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item {

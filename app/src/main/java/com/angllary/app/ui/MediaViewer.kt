@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -46,6 +47,7 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -143,8 +145,8 @@ fun MediaViewer(
     ) {
         AnimatedVisibility(
             visible = viewerVisible,
-            enter = fadeIn(tween(180)) + scaleIn(initialScale = 0.975f, animationSpec = tween(220)),
-            exit = fadeOut(tween(150)) + scaleOut(targetScale = 0.985f, animationSpec = tween(170)),
+            enter = fadeIn(tween(210)) + scaleIn(initialScale = 0.94f, animationSpec = spring(dampingRatio = 0.88f, stiffness = 340f)),
+            exit = fadeOut(tween(160)) + scaleOut(targetScale = 0.975f, animationSpec = spring(dampingRatio = 0.96f, stiffness = 420f)),
             modifier = Modifier.fillMaxSize()
         ) {
             Box(Modifier.fillMaxSize().background(ext.viewerBackground)) {
@@ -152,7 +154,7 @@ fun MediaViewer(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
                     beyondViewportPageCount = 1,
-                    userScrollEnabled = !currentItem.isVideo
+                    userScrollEnabled = true
                 ) { page ->
                     val item = media[page]
                     if (item.isVideo) {
@@ -181,88 +183,103 @@ fun MediaViewer(
 
                 AnimatedVisibility(
                     visible = chromeVisible,
-                    enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { -it / 3 },
-                    exit = fadeOut(tween(140)) + slideOutVertically(tween(170)) { -it / 3 },
-                    modifier = Modifier.align(Alignment.TopCenter).zIndex(2f)
+                    enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { -it / 4 },
+                    exit = fadeOut(tween(150)) + slideOutVertically(tween(210)) { -it / 4 },
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .zIndex(2f)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth()
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color.Black.copy(alpha = 0.78f), Color.Black.copy(alpha = 0.28f), Color.Transparent)
-                                )
-                            )
-                            .statusBarsPadding()
-                            .padding(horizontal = 8.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(50.dp),
+                        color = ext.viewerSurface.copy(alpha = 0.96f),
+                        contentColor = ext.viewerOnSurface,
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                        shadowElevation = 10.dp
                     ) {
-                        IconButton(onClick = ::closeViewer) {
-                            Icon(
-                                Icons.AutoMirrored.Outlined.ArrowBack,
-                                contentDescription = stringResource(R.string.back),
-                                tint = ext.viewerOnSurface
-                            )
-                        }
-                        Column(
-                            Modifier.weight(1f).padding(horizontal = 4.dp),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                formatViewerDate(currentItem.displayDateMillis),
-                                color = ext.viewerOnSurface,
-                                style = MaterialTheme.typography.titleSmall
-                            )
-                            Text(
-                                currentItem.displayName,
-                                color = ext.viewerMuted,
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Text(
-                            "\${pagerState.currentPage + 1} / \${media.size}",
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                            color = ext.viewerOnSurface,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                        Box {
-                            IconButton(onClick = {
-                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                menuExpanded = true
-                            }) {
+                            IconButton(onClick = ::closeViewer, modifier = Modifier.size(48.dp)) {
                                 Icon(
-                                    Icons.Outlined.MoreVert,
-                                    contentDescription = stringResource(R.string.more_options),
+                                    Icons.AutoMirrored.Outlined.ArrowBack,
+                                    contentDescription = stringResource(R.string.back),
                                     tint = ext.viewerOnSurface
                                 )
                             }
-                            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.add_to_album)) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onAddToAlbum(currentItem)
-                                    }
+                            Column(
+                                Modifier.weight(1f).padding(horizontal = 5.dp),
+                                verticalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                Text(
+                                    formatViewerDate(currentItem.displayDateMillis),
+                                    color = ext.viewerOnSurface,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 1
                                 )
-                                if (onRemoveFromAlbum != null) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.remove_from_album)) },
-                                        onClick = {
-                                            menuExpanded = false
-                                            onRemoveFromAlbum(currentItem)
-                                        }
+                                Text(
+                                    currentItem.displayName,
+                                    color = ext.viewerMuted,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Surface(
+                                shape = CircleShape,
+                                color = ext.viewerBackground.copy(alpha = 0.78f)
+                            ) {
+                                Text(
+                                    "${pagerState.currentPage + 1} / ${media.size}",
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                    color = ext.viewerOnSurface,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                            Box {
+                                IconButton(
+                                    onClick = {
+                                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                        menuExpanded = true
+                                    },
+                                    modifier = Modifier.size(48.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.MoreVert,
+                                        contentDescription = stringResource(R.string.more_options),
+                                        tint = ext.viewerOnSurface
                                     )
                                 }
-                                if (!currentItem.isLocked) {
+                                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                                     DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.copy_to_locked_folder)) },
-                                        leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
+                                        text = { Text(stringResource(R.string.add_to_album)) },
                                         onClick = {
                                             menuExpanded = false
-                                            onLockCopy(currentItem)
+                                            onAddToAlbum(currentItem)
                                         }
                                     )
+                                    if (onRemoveFromAlbum != null) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.remove_from_album)) },
+                                            onClick = {
+                                                menuExpanded = false
+                                                onRemoveFromAlbum(currentItem)
+                                            }
+                                        )
+                                    }
+                                    if (!currentItem.isLocked) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.copy_to_locked_folder)) },
+                                            leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
+                                            onClick = {
+                                                menuExpanded = false
+                                                onLockCopy(currentItem)
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -303,44 +320,51 @@ fun MediaViewer(
 
                 AnimatedVisibility(
                     visible = chromeVisible,
-                    enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 3 },
-                    exit = fadeOut(tween(140)) + slideOutVertically(tween(170)) { it / 3 },
-                    modifier = Modifier.align(Alignment.BottomCenter).zIndex(2f)
+                    enter = fadeIn(tween(220)) + slideInVertically(tween(270)) { it / 3 },
+                    exit = fadeOut(tween(150)) + slideOutVertically(tween(210)) { it / 3 },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 12.dp)
+                        .zIndex(2f)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth()
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color.Transparent, Color.Black.copy(alpha = 0.48f), Color.Black.copy(alpha = 0.88f))
-                                )
-                            )
-                            .navigationBarsPadding()
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(50.dp),
+                        color = ext.viewerSurface.copy(alpha = 0.97f),
+                        contentColor = ext.viewerOnSurface,
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                        shadowElevation = 14.dp
                     ) {
-                        ViewerAction(Icons.Outlined.Share, stringResource(R.string.share)) {
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = currentItem.mimeType.ifBlank { if (currentItem.isVideo) "video/*" else "image/*" }
-                                putExtra(Intent.EXTRA_STREAM, currentItem.uri)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        Row(
+                            modifier = Modifier.fillMaxWidth().height(76.dp).padding(horizontal = 5.dp, vertical = 3.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ViewerAction(Icons.Outlined.Share, stringResource(R.string.share)) {
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = currentItem.mimeType.ifBlank { if (currentItem.isVideo) "video/*" else "image/*" }
+                                    putExtra(Intent.EXTRA_STREAM, currentItem.uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(intent, null))
                             }
-                            context.startActivity(Intent.createChooser(intent, null))
-                        }
-                        ViewerAction(
-                            if (isFavorite(currentItem)) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
-                            stringResource(R.string.favorite),
-                            active = isFavorite(currentItem)
-                        ) { onToggleFavorite(currentItem) }
-                        ViewerAction(Icons.Outlined.Info, stringResource(R.string.details)) {
-                            detailsVisible = !detailsVisible
-                        }
-                        if (!currentItem.isLocked) {
-                            ViewerAction(Icons.Outlined.Edit, stringResource(R.string.edit)) {
-                                if (currentItem.isVideo) onTrimVideo(currentItem) else onEditPhoto(currentItem)
+                            ViewerAction(
+                                if (isFavorite(currentItem)) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
+                                stringResource(R.string.favorite),
+                                active = isFavorite(currentItem)
+                            ) { onToggleFavorite(currentItem) }
+                            ViewerAction(Icons.Outlined.Info, stringResource(R.string.details)) {
+                                detailsVisible = !detailsVisible
                             }
-                            ViewerAction(Icons.Outlined.DeleteOutline, stringResource(R.string.move_to_trash)) {
-                                onTrash(currentItem)
+                            if (!currentItem.isLocked) {
+                                ViewerAction(Icons.Outlined.Edit, stringResource(R.string.edit)) {
+                                    if (currentItem.isVideo) onTrimVideo(currentItem) else onEditPhoto(currentItem)
+                                }
+                                ViewerAction(Icons.Outlined.DeleteOutline, stringResource(R.string.move_to_trash)) {
+                                    onTrash(currentItem)
+                                }
                             }
                         }
                     }
@@ -362,7 +386,7 @@ private fun ImageContent(item: MediaItem, onTap: () -> Unit) {
         model = item.uri,
         contentDescription = item.displayName,
         modifier = Modifier.fillMaxSize()
-            .transformable(transformState)
+            .transformable(state = transformState, canPan = { scale > 1.01f })
             .scale(scale)
             .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
             .clickable(
@@ -401,18 +425,23 @@ private fun VideoContent(
                         MotionEvent.ACTION_DOWN -> {
                             downX = event.x
                             downY = event.y
+                            false
                         }
                         MotionEvent.ACTION_UP -> {
                             val deltaX = event.x - downX
                             val deltaY = event.y - downY
-                            val centralPlaybackArea = downY in (target.height * 0.14f)..(target.height * 0.78f)
-                            if (centralPlaybackArea && abs(deltaX) > 72f && abs(deltaX) > abs(deltaY) * 1.35f) {
+                            val centralPlaybackArea = downY in (target.height * 0.10f)..(target.height * 0.90f)
+                            val horizontalSwipe = centralPlaybackArea &&
+                                abs(deltaX) > target.width * 0.14f &&
+                                abs(deltaX) > abs(deltaY) * 1.25f
+                            if (horizontalSwipe) {
                                 if (deltaX < 0f) onSwipeNext() else onSwipePrevious()
                             }
+                            horizontalSwipe
                         }
+                        MotionEvent.ACTION_CANCEL -> false
+                        else -> false
                     }
-                    // Never consume the event: PlayerView retains tap, pause and seek behaviour.
-                    false
                 }
                 useController = true
                 controllerAutoShow = true
