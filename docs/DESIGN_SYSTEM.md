@@ -2,6 +2,8 @@
 
 ## Product feel
 
+Version 0.5.0 tightens the interface around true black/white foundations, floating pill controls and native paging.
+
 Angllary is a quiet, media-first gallery. Content is the focal point; navigation and actions are a light, consistent layer rather than heavy app chrome.
 
 - No advertisements, account prompts, social feed or AI upsell.
@@ -23,19 +25,19 @@ All colour tokens use equal red, green and blue channel values. This is intentio
 
 | Token | Light | Dark |
 |---|---|---|
-| Canvas | #F4F4F4 | #111111 |
-| Surface | #FAFAFA | #1B1B1B |
-| Secondary surface | #EEEEEE | #242424 |
-| Raised surface | #E5E5E5 | #303030 |
-| Primary text | #171717 | #F4F4F4 |
-| Secondary text | #737373 | #A3A3A3 |
-| Divider | #D7D7D7 | #3A3A3A |
+| Canvas | #FFFFFF | #000000 |
+| Surface | #FFFFFF | #111111 |
+| Secondary surface | #F4F4F4 | #191919 |
+| Raised surface | #EAEAEA | #242424 |
+| Primary text | #000000 | #FFFFFF |
+| Secondary text | #666666 | #B3B3B3 |
+| Divider | #D6D6D6 | #363636 |
 
 Viewer content uses a consistent dark-neutral viewing canvas in both themes. Media overlays use monochrome gradients only to preserve text and control contrast.
 
 ## Shape and component system
 
-- Floating dock: one unified 58dp-tall container with 25dp outer radius.
+- Floating dock: a unified 58dp-tall pill, 50dp outer radius, raised above the gallery with a clear outline and shadow; it overlays content instead of occupying a solid footer row.
 - Dock segments: equal 48dp hit area and 18dp inner radius.
 - Primary compact actions: 42–48dp height, 12–14dp corner radius.
 - Search field: 16dp corner radius.
@@ -48,9 +50,11 @@ The brand and date in the top bar are typographic elements, not separate competi
 
 ## Navigation and interaction
 
+- The home dock floats above the content area; gallery and album lists reserve enough trailing scroll space to avoid hiding the last items.
+
 - Main header: brand at left, scroll-aware date centred, overflow menu at right.
 - Bottom dock: Search action, divider, All and Albums.
-- Horizontal swipes switch All/Albums. The selected destination and scroll positions survive switching and opening Search.
+- A native horizontal pager switches All/Albums, leaving vertical scrolling to each page. The selected destination and scroll positions survive switching and opening Search.
 - Search is a dedicated destination, not a modal dialog.
 - System predictive back moves the destination surface with the back gesture.
 - The viewer pages horizontally through photos and videos. Video paging is detected on the video canvas without intentionally consuming player-control touches.
