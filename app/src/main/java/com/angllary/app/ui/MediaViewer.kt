@@ -144,8 +144,8 @@ fun MediaViewer(
     ) {
         AnimatedVisibility(
             visible = viewerVisible,
-            enter = fadeIn(tween(180)) + scaleIn(initialScale = 0.975f, animationSpec = tween(220)),
-            exit = fadeOut(tween(150)) + scaleOut(targetScale = 0.985f, animationSpec = tween(170)),
+            enter = fadeIn(tween(210)) + scaleIn(initialScale = 0.94f, animationSpec = spring(dampingRatio = 0.88f, stiffness = 340f)),
+            exit = fadeOut(tween(160)) + scaleOut(targetScale = 0.975f, animationSpec = spring(dampingRatio = 0.96f, stiffness = 420f)),
             modifier = Modifier.fillMaxSize()
         ) {
             Box(Modifier.fillMaxSize().background(ext.viewerBackground)) {
@@ -425,18 +425,23 @@ private fun VideoContent(
                         MotionEvent.ACTION_DOWN -> {
                             downX = event.x
                             downY = event.y
+                            false
                         }
                         MotionEvent.ACTION_UP -> {
                             val deltaX = event.x - downX
                             val deltaY = event.y - downY
-                            val centralPlaybackArea = downY in (target.height * 0.14f)..(target.height * 0.78f)
-                            if (centralPlaybackArea && abs(deltaX) > 72f && abs(deltaX) > abs(deltaY) * 1.35f) {
+                            val centralPlaybackArea = downY in (target.height * 0.10f)..(target.height * 0.90f)
+                            val horizontalSwipe = centralPlaybackArea &&
+                                abs(deltaX) > target.width * 0.14f &&
+                                abs(deltaX) > abs(deltaY) * 1.25f
+                            if (horizontalSwipe) {
                                 if (deltaX < 0f) onSwipeNext() else onSwipePrevious()
                             }
+                            horizontalSwipe
                         }
+                        MotionEvent.ACTION_CANCEL -> false
+                        else -> false
                     }
-                    // Never consume the event: PlayerView retains tap, pause and seek behaviour.
-                    false
                 }
                 useController = true
                 controllerAutoShow = true
