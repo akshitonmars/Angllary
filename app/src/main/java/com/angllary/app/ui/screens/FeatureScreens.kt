@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -183,7 +184,7 @@ fun AlbumsScreen(
             item {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxWidth().height((customAlbums.size / 2 + customAlbums.size % 2) * 216.dp),
+                    modifier = Modifier.fillMaxWidth().height(216.dp * (customAlbums.size / 2 + customAlbums.size % 2).toFloat()),
                     userScrollEnabled = false,
                     contentPadding = PaddingValues(bottom = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -232,7 +233,7 @@ fun AlbumsScreen(
             item {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxWidth().height((groups.size / 2 + groups.size % 2) * 216.dp),
+                    modifier = Modifier.fillMaxWidth().height(216.dp * (groups.size / 2 + groups.size % 2).toFloat()),
                     userScrollEnabled = false,
                     contentPadding = PaddingValues(bottom = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
