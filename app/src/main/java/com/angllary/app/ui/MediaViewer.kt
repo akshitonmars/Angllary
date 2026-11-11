@@ -331,6 +331,7 @@ fun MediaViewer(
                     }
                 }
             }
+            }
 
             AnimatedVisibility(
                 visible = detailsVisible && chromeVisible,
