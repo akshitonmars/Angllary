@@ -1,22 +1,21 @@
 package com.angllary.app.ui
 
+import android.app.Activity
 import android.content.Intent
-import android.view.MotionEvent
 import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -24,7 +23,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,6 +31,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -43,11 +43,10 @@ import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -66,9 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -76,9 +73,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
+import androidx.core.view.WindowCompat
 import androidx.media3.common.MediaItem as PlayerMediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
@@ -94,6 +90,12 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+/**
+ * Full-window viewer. It is deliberately rendered in the activity's Compose
+ * hierarchy rather than a Dialog window: this keeps the black canvas behind
+ * the status/navigation bars and prevents the gallery underneath from peeking
+ * through at the bottom edge on devices with edge-to-edge layouts.
+ */
 @Composable
 fun MediaViewer(
     media: List<MediaItem>,
@@ -114,260 +116,325 @@ fun MediaViewer(
     val context = LocalContext.current
     val view = LocalView.current
     val scope = rememberCoroutineScope()
-    val pagerState = androidx.compose.foundation.pager.rememberPagerState(
+    val activity = context as? Activity
+    val pagerState = rememberPagerState(
         initialPage = initialIndex.coerceIn(media.indices)
     ) { media.size }
     val currentItem = media.getOrNull(pagerState.currentPage) ?: return
 
-    var chromeVisible by remember { mutableStateOf(true) }
     var detailsVisible by remember { mutableStateOf(false) }
     var menuExpanded by remember { mutableStateOf(false) }
     var viewerVisible by remember { mutableStateOf(false) }
     var closeRequested by remember { mutableStateOf(false) }
+    var imageZoomed by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewerVisible = true }
+    LaunchedEffect(pagerState.currentPage) {
+        imageZoomed = false
+        detailsVisible = false
+        menuExpanded = false
+    }
+
+    DisposableEffect(activity) {
+        val window = activity?.window
+        val controller = window?.let { WindowCompat.getInsetsController(it, it.decorView) }
+        val oldLightStatus = controller?.isAppearanceLightStatusBars ?: false
+        val oldLightNavigation = controller?.isAppearanceLightNavigationBars ?: false
+        controller?.isAppearanceLightStatusBars = false
+        controller?.isAppearanceLightNavigationBars = false
+        onDispose {
+            controller?.isAppearanceLightStatusBars = oldLightStatus
+            controller?.isAppearanceLightNavigationBars = oldLightNavigation
+        }
+    }
 
     fun closeViewer() {
         if (closeRequested) return
         closeRequested = true
         viewerVisible = false
         scope.launch {
-            delay(190)
+            delay(170)
             onDismiss()
         }
     }
 
     BackHandler(onBack = ::closeViewer)
 
-    Dialog(
-        onDismissRequest = ::closeViewer,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+    AnimatedVisibility(
+        visible = viewerVisible,
+        enter = fadeIn(tween(180)),
+        exit = fadeOut(tween(130)),
+        modifier = Modifier
+            .fillMaxSize()
+            .zIndex(30f)
     ) {
-        AnimatedVisibility(
-            visible = viewerVisible,
-            enter = fadeIn(tween(210)) + scaleIn(initialScale = 0.94f, animationSpec = spring(dampingRatio = 0.88f, stiffness = 340f)),
-            exit = fadeOut(tween(160)) + scaleOut(targetScale = 0.975f, animationSpec = spring(dampingRatio = 0.96f, stiffness = 420f)),
-            modifier = Modifier.fillMaxSize()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(ext.viewerBackground)
         ) {
-            Box(Modifier.fillMaxSize().background(ext.viewerBackground)) {
-                androidx.compose.foundation.pager.HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                    beyondViewportPageCount = 1,
-                    userScrollEnabled = true
-                ) { page ->
-                    val item = media[page]
-                    if (item.isVideo) {
-                        VideoContent(
-                            item = item,
-                            onSwipePrevious = {
-                                if (pagerState.currentPage > 0) {
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
-                                }
-                            },
-                            onSwipeNext = {
-                                if (pagerState.currentPage < media.lastIndex) {
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
-                                }
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                beyondViewportPageCount = 1,
+                userScrollEnabled = !imageZoomed
+            ) { page ->
+                val item = media[page]
+                if (item.isVideo) {
+                    VideoContent(
+                        item = item,
+                        onSwipePrevious = {
+                            if (pagerState.currentPage > 0) {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
                             }
+                        },
+                        onSwipeNext = {
+                            if (pagerState.currentPage < media.lastIndex) {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                            }
+                        }
+                    )
+                } else {
+                    ImageContent(
+                        item = item,
+                        onZoomChanged = { imageZoomed = it }
+                    )
+                }
+            }
+
+            // Top information pill. It remains visible instead of disappearing
+            // after a tap, so the viewer never loses its navigation affordance.
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .fillMaxWidth()
+                    .zIndex(3f),
+                shape = RoundedCornerShape(50.dp),
+                color = ext.viewerSurface,
+                contentColor = ext.viewerOnSurface,
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                shadowElevation = 12.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(62.dp)
+                        .padding(horizontal = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = ::closeViewer, modifier = Modifier.size(48.dp)) {
+                        Icon(
+                            Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                            tint = ext.viewerOnSurface
                         )
-                    } else {
-                        ImageContent(item) {
-                            chromeVisible = !chromeVisible
-                            if (!chromeVisible) detailsVisible = false
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f).padding(start = 4.dp, end = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
+                        Text(
+                            formatViewerDate(currentItem.displayDateMillis),
+                            color = ext.viewerOnSurface,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1
+                        )
+                        Text(
+                            currentItem.displayName,
+                            color = ext.viewerMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Surface(
+                        shape = CircleShape,
+                        color = ext.viewerBackground,
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
+                    ) {
+                        Text(
+                            "${pagerState.currentPage + 1} / ${media.size}",
+                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                            color = ext.viewerOnSurface,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                    Box {
+                        IconButton(
+                            onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                menuExpanded = true
+                            },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                Icons.Outlined.MoreHoriz,
+                                contentDescription = stringResource(R.string.more_options),
+                                tint = ext.viewerOnSurface,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.add_to_album)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onAddToAlbum(currentItem)
+                                }
+                            )
+                            if (onRemoveFromAlbum != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.remove_from_album)) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onRemoveFromAlbum(currentItem)
+                                    }
+                                )
+                            }
+                            if (!currentItem.isLocked) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.copy_to_locked_folder)) },
+                                    leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onLockCopy(currentItem)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
+            }
 
-                AnimatedVisibility(
-                    visible = chromeVisible,
-                    enter = fadeIn(tween(220)) + slideInVertically(tween(260)) { -it / 4 },
-                    exit = fadeOut(tween(150)) + slideOutVertically(tween(210)) { -it / 4 },
+            AnimatedVisibility(
+                visible = detailsVisible,
+                enter = fadeIn(tween(160)) + slideInVertically(tween(200)) { it / 5 },
+                exit = fadeOut(tween(120)) + slideOutVertically(tween(160)) { it / 5 },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 112.dp)
+                    .zIndex(2f)
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    color = ext.viewerSurface,
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                    shadowElevation = 12.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            stringResource(R.string.viewer_details),
+                            color = ext.viewerOnSurface,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        MetadataLine(stringResource(R.string.viewer_file), currentItem.displayName, ext)
+                        MetadataLine(stringResource(R.string.viewer_date), formatViewerDate(currentItem.displayDateMillis), ext)
+                        if (currentItem.width > 0 && currentItem.height > 0) {
+                            MetadataLine(stringResource(R.string.viewer_resolution), "${currentItem.width} × ${currentItem.height}", ext)
+                        }
+                        if (currentItem.sizeBytes > 0) {
+                            MetadataLine(stringResource(R.string.viewer_size), formatBytes(currentItem.sizeBytes), ext)
+                        }
+                        if (currentItem.durationMillis > 0) {
+                            MetadataLine(stringResource(R.string.viewer_duration), formatDuration(currentItem.durationMillis), ext)
+                        }
+                        if (currentItem.relativePath.isNotBlank()) {
+                            MetadataLine(stringResource(R.string.viewer_folder), currentItem.relativePath, ext)
+                        }
+                        if (currentItem.mimeType.isNotBlank()) {
+                            MetadataLine(stringResource(R.string.viewer_type), currentItem.mimeType, ext)
+                        }
+                    }
+                }
+            }
+
+            // Bottom actions are a separate floating pill, above the gesture
+            // navigation inset, with a generous hit target for every action.
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 14.dp)
+                    .padding(bottom = 12.dp)
+                    .fillMaxWidth()
+                    .zIndex(3f),
+                shape = RoundedCornerShape(50.dp),
+                color = ext.viewerSurface,
+                contentColor = ext.viewerOnSurface,
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                shadowElevation = 16.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(78.dp)
+                        .padding(horizontal = 4.dp, vertical = 3.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ViewerAction(Icons.Outlined.Share, stringResource(R.string.share)) {
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = currentItem.mimeType.ifBlank {
+                                if (currentItem.isVideo) "video/*" else "image/*"
+                            }
+                            putExtra(Intent.EXTRA_STREAM, currentItem.uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(Intent.createChooser(intent, null))
+                    }
+                    ViewerAction(
+                        if (isFavorite(currentItem)) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
+                        stringResource(R.string.favorite),
+                        active = isFavorite(currentItem)
+                    ) {
+                        onToggleFavorite(currentItem)
+                    }
+                    ViewerAction(Icons.Outlined.Info, stringResource(R.string.details)) {
+                        detailsVisible = !detailsVisible
+                    }
+                    if (!currentItem.isLocked) {
+                        ViewerAction(Icons.Outlined.Edit, stringResource(R.string.edit)) {
+                            if (currentItem.isVideo) onTrimVideo(currentItem) else onEditPhoto(currentItem)
+                        }
+                        ViewerAction(
+                            Icons.Outlined.DeleteOutline,
+                            stringResource(R.string.move_to_trash),
+                            emphasized = true
+                        ) {
+                            onTrash(currentItem)
+                        }
+                    }
+                }
+            }
+
+            if (imageZoomed) {
+                Surface(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .statusBarsPadding()
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
-                        .zIndex(2f)
+                        .padding(top = 86.dp)
+                        .zIndex(4f),
+                    shape = CircleShape,
+                    color = ext.viewerSurface.copy(alpha = 0.92f)
                 ) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(50.dp),
-                        color = ext.viewerSurface.copy(alpha = 0.96f),
-                        contentColor = ext.viewerOnSurface,
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-                        shadowElevation = 10.dp
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(onClick = ::closeViewer, modifier = Modifier.size(48.dp)) {
-                                Icon(
-                                    Icons.AutoMirrored.Outlined.ArrowBack,
-                                    contentDescription = stringResource(R.string.back),
-                                    tint = ext.viewerOnSurface
-                                )
-                            }
-                            Column(
-                                Modifier.weight(1f).padding(horizontal = 5.dp),
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Text(
-                                    formatViewerDate(currentItem.displayDateMillis),
-                                    color = ext.viewerOnSurface,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    maxLines = 1
-                                )
-                                Text(
-                                    currentItem.displayName,
-                                    color = ext.viewerMuted,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            Surface(
-                                shape = CircleShape,
-                                color = ext.viewerBackground.copy(alpha = 0.78f)
-                            ) {
-                                Text(
-                                    "${pagerState.currentPage + 1} / ${media.size}",
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                                    color = ext.viewerOnSurface,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            }
-                            Box {
-                                IconButton(
-                                    onClick = {
-                                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                        menuExpanded = true
-                                    },
-                                    modifier = Modifier.size(48.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.MoreVert,
-                                        contentDescription = stringResource(R.string.more_options),
-                                        tint = ext.viewerOnSurface
-                                    )
-                                }
-                                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.add_to_album)) },
-                                        onClick = {
-                                            menuExpanded = false
-                                            onAddToAlbum(currentItem)
-                                        }
-                                    )
-                                    if (onRemoveFromAlbum != null) {
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(R.string.remove_from_album)) },
-                                            onClick = {
-                                                menuExpanded = false
-                                                onRemoveFromAlbum(currentItem)
-                                            }
-                                        )
-                                    }
-                                    if (!currentItem.isLocked) {
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(R.string.copy_to_locked_folder)) },
-                                            leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
-                                            onClick = {
-                                                menuExpanded = false
-                                                onLockCopy(currentItem)
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                AnimatedVisibility(
-                    visible = detailsVisible && chromeVisible,
-                    enter = fadeIn(tween(160)) + slideInVertically(tween(210)) { it / 4 },
-                    exit = fadeOut(tween(130)) + slideOutVertically(tween(170)) { it / 4 },
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                        .padding(horizontal = 14.dp)
-                        .padding(bottom = 94.dp)
-                        .zIndex(1f)
-                ) {
-                    Surface(shape = RoundedCornerShape(20.dp), color = ext.viewerSurface.copy(alpha = 0.97f)) {
-                        Column(
-                            Modifier.padding(horizontal = 18.dp, vertical = 15.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                stringResource(R.string.viewer_details),
-                                color = ext.viewerOnSurface,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            MetadataLine(stringResource(R.string.viewer_file), currentItem.displayName, ext)
-                            MetadataLine(stringResource(R.string.viewer_date), formatViewerDate(currentItem.displayDateMillis), ext)
-                            if (currentItem.width > 0 && currentItem.height > 0) {
-                                MetadataLine(stringResource(R.string.viewer_resolution), "\${currentItem.width} × \${currentItem.height}", ext)
-                            }
-                            if (currentItem.sizeBytes > 0) MetadataLine(stringResource(R.string.viewer_size), formatBytes(currentItem.sizeBytes), ext)
-                            if (currentItem.durationMillis > 0) MetadataLine(stringResource(R.string.viewer_duration), formatDuration(currentItem.durationMillis), ext)
-                            if (currentItem.relativePath.isNotBlank()) MetadataLine(stringResource(R.string.viewer_folder), currentItem.relativePath, ext)
-                            if (currentItem.mimeType.isNotBlank()) MetadataLine(stringResource(R.string.viewer_type), currentItem.mimeType, ext)
-                        }
-                    }
-                }
-
-                AnimatedVisibility(
-                    visible = chromeVisible,
-                    enter = fadeIn(tween(220)) + slideInVertically(tween(270)) { it / 3 },
-                    exit = fadeOut(tween(150)) + slideOutVertically(tween(210)) { it / 3 },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 12.dp)
-                        .zIndex(2f)
-                ) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(50.dp),
-                        color = ext.viewerSurface.copy(alpha = 0.97f),
-                        contentColor = ext.viewerOnSurface,
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-                        shadowElevation = 14.dp
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().height(76.dp).padding(horizontal = 5.dp, vertical = 3.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            ViewerAction(Icons.Outlined.Share, stringResource(R.string.share)) {
-                                val intent = Intent(Intent.ACTION_SEND).apply {
-                                    type = currentItem.mimeType.ifBlank { if (currentItem.isVideo) "video/*" else "image/*" }
-                                    putExtra(Intent.EXTRA_STREAM, currentItem.uri)
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                context.startActivity(Intent.createChooser(intent, null))
-                            }
-                            ViewerAction(
-                                if (isFavorite(currentItem)) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
-                                stringResource(R.string.favorite),
-                                active = isFavorite(currentItem)
-                            ) { onToggleFavorite(currentItem) }
-                            ViewerAction(Icons.Outlined.Info, stringResource(R.string.details)) {
-                                detailsVisible = !detailsVisible
-                            }
-                            if (!currentItem.isLocked) {
-                                ViewerAction(Icons.Outlined.Edit, stringResource(R.string.edit)) {
-                                    if (currentItem.isVideo) onTrimVideo(currentItem) else onEditPhoto(currentItem)
-                                }
-                                ViewerAction(Icons.Outlined.DeleteOutline, stringResource(R.string.move_to_trash)) {
-                                    onTrash(currentItem)
-                                }
-                            }
-                        }
-                    }
+                    Text(
+                        "Zoomed · swipe to pan",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                        color = ext.viewerMuted,
+                        style = MaterialTheme.typography.labelSmall
+                    )
                 }
             }
         }
@@ -375,26 +442,38 @@ fun MediaViewer(
 }
 
 @Composable
-private fun ImageContent(item: MediaItem, onTap: () -> Unit) {
+private fun ImageContent(
+    item: MediaItem,
+    onZoomChanged: (Boolean) -> Unit
+) {
     var scale by remember(item.uri) { mutableFloatStateOf(1f) }
     var offset by remember(item.uri) { mutableStateOf(Offset.Zero) }
-    val transformState = androidx.compose.foundation.gestures.rememberTransformableState { zoomChange, panChange, _ ->
-        scale = (scale * zoomChange).coerceIn(1f, 5f)
-        offset = if (scale <= 1f) Offset.Zero else offset + panChange
+    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+        val nextScale = (scale * zoomChange).coerceIn(1f, 5f)
+        scale = nextScale
+        if (nextScale <= 1.01f) {
+            offset = Offset.Zero
+            onZoomChanged(false)
+        } else {
+            offset += panChange
+            onZoomChanged(true)
+        }
     }
+
     AsyncImage(
         model = item.uri,
         contentDescription = item.displayName,
-        modifier = Modifier.fillMaxSize()
-            .transformable(state = transformState, canPan = { scale > 1.01f })
+        modifier = Modifier
+            .fillMaxSize()
+            .transformable(
+                state = transformState,
+                canPan = { scale > 1.01f }
+            )
             .scale(scale)
-            .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onTap
-            ),
-        contentScale = ContentScale.Fit
+            .offset {
+                IntOffset(offset.x.roundToInt(), offset.y.roundToInt())
+            },
+        contentScale = androidx.compose.ui.layout.ContentScale.Fit
     )
 }
 
@@ -412,7 +491,9 @@ private fun VideoContent(
             playWhenReady = false
         }
     }
-    DisposableEffect(player) { onDispose { player.release() } }
+    DisposableEffect(player) {
+        onDispose { player.release() }
+    }
 
     AndroidView(
         modifier = Modifier.fillMaxSize(),
@@ -430,16 +511,14 @@ private fun VideoContent(
                         MotionEvent.ACTION_UP -> {
                             val deltaX = event.x - downX
                             val deltaY = event.y - downY
-                            val centralPlaybackArea = downY in (target.height * 0.10f)..(target.height * 0.90f)
-                            val horizontalSwipe = centralPlaybackArea &&
+                            val horizontalSwipe =
                                 abs(deltaX) > target.width * 0.14f &&
-                                abs(deltaX) > abs(deltaY) * 1.25f
+                                    abs(deltaX) > abs(deltaY) * 1.3f
                             if (horizontalSwipe) {
                                 if (deltaX < 0f) onSwipeNext() else onSwipePrevious()
                             }
                             horizontalSwipe
                         }
-                        MotionEvent.ACTION_CANCEL -> false
                         else -> false
                     }
                 }
@@ -457,26 +536,51 @@ private fun ViewerAction(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     active: Boolean = false,
+    emphasized: Boolean = false,
     onClick: () -> Unit
 ) {
     val ext = LocalExtendedColors.current
     val view = LocalView.current
     val scale by animateFloatAsState(
-        targetValue = if (active) 1.08f else 1f,
-        animationSpec = spring(stiffness = 560f, dampingRatio = 0.62f),
+        targetValue = if (active) 1.06f else 1f,
+        animationSpec = spring(stiffness = 520f, dampingRatio = 0.78f),
         label = "viewerActionScale"
     )
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        IconButton(
-            onClick = {
+    Column(
+        modifier = Modifier
+            .scale(scale)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onClick()
-            },
-            modifier = Modifier.size(44.dp).scale(scale)
+            }
+            .padding(horizontal = 6.dp, vertical = 5.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        Surface(
+            modifier = Modifier.size(42.dp),
+            shape = CircleShape,
+            color = if (emphasized) Color.White else Color.Transparent,
+            border = if (emphasized) null else BorderStroke(1.dp, Color.White.copy(alpha = 0.09f))
         ) {
-            Icon(icon, contentDescription = label, tint = ext.viewerOnSurface, modifier = Modifier.size(21.dp))
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    icon,
+                    contentDescription = label,
+                    tint = if (emphasized) Color.Black else ext.viewerOnSurface,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
-        Text(label, style = MaterialTheme.typography.labelSmall, color = ext.viewerMuted)
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (emphasized) ext.viewerOnSurface else ext.viewerMuted,
+            maxLines = 1
+        )
     }
 }
 
@@ -486,9 +590,24 @@ private fun MetadataLine(
     value: String,
     ext: com.angllary.app.ui.theme.ExtendedColors
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(label, modifier = Modifier.weight(0.31f), color = ext.viewerMuted, style = MaterialTheme.typography.bodySmall)
-        Text(value, modifier = Modifier.weight(0.69f), color = ext.viewerOnSurface, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            label,
+            modifier = Modifier.weight(0.31f),
+            color = ext.viewerMuted,
+            style = MaterialTheme.typography.bodySmall
+        )
+        Text(
+            value,
+            modifier = Modifier.weight(0.69f),
+            color = ext.viewerOnSurface,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -496,7 +615,7 @@ private fun formatViewerDate(timestamp: Long): String =
     SimpleDateFormat("d MMM yyyy · HH:mm", Locale.getDefault()).format(Date(timestamp))
 
 private fun formatBytes(bytes: Long): String =
-    if (bytes < 1024L * 1024L) "\${bytes / 1024L} KB"
+    if (bytes < 1024L * 1024L) "${bytes / 1024L} KB"
     else String.format(Locale.getDefault(), "%.1f MB", bytes / (1024f * 1024f))
 
 private fun formatDuration(ms: Long): String {
