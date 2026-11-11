@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -35,7 +36,6 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.RotateRight
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -350,7 +350,7 @@ fun VideoTrimScreen(
                         if (duration <= 0L || exporting) return@rememberHapticClick
                         val startMs = (duration * startFraction).toLong()
                         val endMs = (duration * endFraction).toLong()
-                        if (endMs <= startMs) return@Button
+                        if (endMs <= startMs) return@rememberHapticClick
                         exporting = true
                         status = context.getString(R.string.exporting_video)
                         val output = File(context.cacheDir, "angllary_trim_${System.currentTimeMillis()}.mp4")
