@@ -77,6 +77,7 @@ import com.angllary.app.data.LockedEntry
 import com.angllary.app.data.LockedFolderStore
 import com.angllary.app.model.CustomAlbum
 import com.angllary.app.model.MediaItem
+import com.angllary.app.ui.components.MediaThumbnail
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -193,7 +194,7 @@ fun AlbumsScreen(
                         AlbumCard(
                             title = album.name,
                             count = albumMedia.size,
-                            cover = albumMedia.firstOrNull()?.uri,
+                            cover = albumMedia.firstOrNull(),
                             onClick = { onOpenCustomAlbum(album.id, album.name) },
                             trailing = {
                                 var expanded by remember(album.id) { mutableStateOf(false) }
@@ -241,7 +242,7 @@ fun AlbumsScreen(
                         AlbumCard(
                             title = album.name,
                             count = album.media.size,
-                            cover = album.media.firstOrNull()?.uri,
+                            cover = album.media.firstOrNull(),
                             onClick = { onOpenDeviceAlbum(album.id, album.name) }
                         )
                     }
@@ -255,7 +256,7 @@ fun AlbumsScreen(
 private fun AlbumCard(
     title: String,
     count: Int,
-    cover: android.net.Uri?,
+    cover: MediaItem?,
     onClick: () -> Unit,
     trailing: (@Composable () -> Unit)? = null
 ) {
@@ -267,7 +268,7 @@ private fun AlbumCard(
                 .clickable(onClick = onClick)
         ) {
             if (cover != null) {
-                AsyncImage(model = cover, contentDescription = title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                MediaThumbnail(item = cover, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             } else {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
@@ -370,9 +371,8 @@ fun SearchOverlay(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                AsyncImage(
-                                    model = item.uri,
-                                    contentDescription = item.displayName,
+                                MediaThumbnail(
+                                    item = item,
                                     modifier = Modifier.size(58.dp).clip(RoundedCornerShape(10.dp)),
                                     contentScale = ContentScale.Crop
                                 )
@@ -428,7 +428,7 @@ fun TrashScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(11.dp)
                     ) {
-                        AsyncImage(model = item.uri, contentDescription = item.displayName, modifier = Modifier.size(62.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop)
+                        MediaThumbnail(item = item, modifier = Modifier.size(62.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(item.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(formatSearchDate(item.displayDateMillis), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
