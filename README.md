@@ -6,13 +6,15 @@ Angllary is a native Android gallery designed around a quiet monochrome interfac
 
 ## Design principles
 
+- **Floating controls:** navigation and viewer actions use independent pill surfaces that sit above media rather than occupying a solid footer bar.
+
 - **Local-first:** the library is read from Android MediaStore. No account or cloud library is required.
 - **Private by default:** favourites and collections are local; Angllary does not upload your gallery.
 - **Media-first:** photos and videos occupy the screen, while controls stay compact and consistent.
 - **True neutral palette:** light mode uses greys and near-white; dark mode uses greys and near-black. Every design token is grayscale—no green, teal or warm tint.
 - **Originals protected:** photo and video edits export as new files. Locked Folder imports are encrypted copies.
 
-## Features in v0.4.1
+## Features in v0.5.0
 
 ### Gallery and organisation
 - [x] Adaptive staggered photo and video grid with consistent spacing and dimensions.
@@ -22,12 +24,12 @@ Angllary is a native Android gallery designed around a quiet monochrome interfac
 - [x] Persistent local favourites.
 - [x] Newest/oldest sorting and compact/comfortable/large grid settings.
 - [x] Dedicated local Search destination for filenames, folders, albums, MIME types, dates, photos, videos and favourites.
-- [x] All/Albums horizontal swipe navigation.
+- [x] All/Albums native horizontal pager with preserved gallery and album scroll positions.
 - [x] All and Albums scroll positions preserved when switching tabs and returning from Search.
 
 ### Photo and video viewing
-- [x] Full-screen viewer with horizontal photo navigation.
-- [x] Horizontal swipes between video and photo items while keeping Media3 playback controls usable.
+- [x] Full-screen media pager with next/previous swipes across photos and videos.
+- [x] Photo swipes work at fit-to-screen scale; image panning takes over only after pinch zoom. Video swipes use a direction and distance threshold so normal playback taps remain usable.
 - [x] Pinch zoom and pan for photos.
 - [x] In-app video playback with Media3 controls.
 - [x] Cached video-frame thumbnails with a MediaMetadataRetriever fallback for devices whose MediaStore thumbnail provider does not return a frame.
