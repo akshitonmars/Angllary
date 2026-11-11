@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 private object Palette {
     val Canvas = Color(0xFFFFFFFF)
     val Surface = Color(0xFFFFFFFF)
-    val SurfaceLow = Color(0xFFFFFFFF)
+    val SurfaceLow = Color(0xFFF4F4F4)
     val SurfaceHigh = Color(0xFFEAEAEA)
     val Ink = Color(0xFF000000)
     val InkSoft = Color(0xFF333333)
@@ -37,7 +37,7 @@ private object Palette {
     val SurfaceDark = Color(0xFF111111)
     val SurfaceLowDark = Color(0xFF191919)
     val SurfaceHighDark = Color(0xFF242424)
-    val InkDark = Color(0xFFF4F4F4)
+    val InkDark = Color(0xFFFFFFFF)
     val InkSoftDark = Color(0xFFE5E5E5)
     val MutedDark = Color(0xFFB3B3B3)
     val DividerDark = Color(0xFF363636)
