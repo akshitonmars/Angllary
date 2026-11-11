@@ -47,7 +47,7 @@ fun MediaThumbnail(
     }
 
     val context = LocalContext.current
-    val bitmap = produceState<Bitmap?>(initialValue = VideoThumbnailCache.get(item.uri)) {
+    val bitmap = produceState<Bitmap?>(initialValue = VideoThumbnailCache.get(item.uri), key1 = item.uri) {
         value = withContext(Dispatchers.IO) {
             VideoThumbnailCache.load(context.applicationContext, item.uri)
         }
