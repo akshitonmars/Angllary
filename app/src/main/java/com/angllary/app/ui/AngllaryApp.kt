@@ -150,6 +150,7 @@ fun AngllaryApp(
     var backProgress by remember { mutableFloatStateOf(0f) }
     var viewerItems by remember { mutableStateOf(emptyList<MediaItem>()) }
     var viewerIndex by remember { mutableStateOf<Int?>(null) }
+    var closeViewerAfterTrash by remember { mutableStateOf(false) }
     var lockedPreviewEntry by remember { mutableStateOf<LockedEntry?>(null) }
     var editorItem by remember { mutableStateOf<MediaItem?>(null) }
 
@@ -169,8 +170,14 @@ fun AngllaryApp(
 
     val systemMediaAction = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
-    ) {
+    ) { result ->
         reloadKey++
+        if (closeViewerAfterTrash) {
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                viewerIndex = null
+            }
+            closeViewerAfterTrash = false
+        }
     }
 
     val lockedBackupExport = rememberLauncherForActivityResult(
@@ -300,6 +307,7 @@ fun AngllaryApp(
 
     fun showSystemMediaRequest(pendingIntent: PendingIntent?) {
         if (pendingIntent == null) {
+            closeViewerAfterTrash = false
             showMessage(context, context.getString(R.string.system_trash_unavailable))
             return
         }
@@ -310,12 +318,14 @@ fun AngllaryApp(
 
     fun moveToTrash(item: MediaItem, shouldTrash: Boolean = true) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            closeViewerAfterTrash = false
             showMessage(context, context.getString(R.string.system_trash_requires_android_11))
             return
         }
         runCatching {
             showSystemMediaRequest(repository.createTrashRequest(listOf(item), shouldTrash))
         }.onFailure {
+            closeViewerAfterTrash = false
             showMessage(context, it.message ?: context.getString(R.string.action_failed))
         }
     }
@@ -653,8 +663,8 @@ fun AngllaryApp(
             isFavorite = { it.uri.toString() in favoriteUris },
             onToggleFavorite = { updateFavorite(it) },
             onTrash = {
+                closeViewerAfterTrash = true
                 moveToTrash(it)
-                viewerIndex = null
             },
             onEditPhoto = {
                 viewerIndex = null
