@@ -2,7 +2,7 @@ name: Android build and GitHub Release
 
 on:
   push:
-    branches: [ main, rebuild/non-ai-complete ]
+    branches: [ main, rebuild/non-ai-complete, polish/ui-ux-v0.4.1 ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
