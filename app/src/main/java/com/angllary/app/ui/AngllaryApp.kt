@@ -13,12 +13,15 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
@@ -363,46 +366,56 @@ fun AngllaryApp(
         Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
     ) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            if (activePage == AppPage.HOME) {
-                AngllaryTopBar(
-                    dateLabel = dateLabel,
-                    onSort = {
-                        sortMode = if (sortMode == "newest") "oldest" else "newest"
-                        galleryStore.setSortMode(sortMode)
-                    },
-                    onGrid = {
-                        gridMode = when (gridMode) {
-                            "compact" -> "comfortable"
-                            "comfortable" -> "large"
-                            else -> "compact"
-                        }
-                        galleryStore.setGridMode(gridMode)
-                    },
-                    onFavorites = { activePage = AppPage.FAVORITES },
-                    onLockedFolder = {
-                        lockedUnlocked = false
-                        activePage = AppPage.LOCKED
-                    },
-                    onTrash = { activePage = AppPage.TRASH },
-                    onSettings = { activePage = AppPage.SETTINGS }
-                )
-            } else {
-                SubPageHeader(
-                    title = when (activePage) {
-                        AppPage.SEARCH -> stringResource(R.string.search)
-                        AppPage.FAVORITES -> stringResource(R.string.favorites)
-                        AppPage.TRASH -> stringResource(R.string.recently_deleted)
-                        AppPage.LOCKED -> stringResource(R.string.locked_folder)
-                        AppPage.SETTINGS -> stringResource(R.string.settings)
-                        AppPage.ALBUM -> openedAlbum?.name.orEmpty()
-                        else -> stringResource(R.string.app_name)
-                    },
-                    onBack = {
-                        if (activePage == AppPage.LOCKED) lockedUnlocked = false
-                        activePage = AppPage.HOME
-                        openedAlbum = null
+            AnimatedContent(
+                targetState = activePage,
+                transitionSpec = {
+                    if (targetState.ordinal >= initialState.ordinal) {
+                        (fadeIn(tween(170)) + slideInVertically(tween(210)) { it / 5 }) togetherWith
+                            (fadeOut(tween(130)) + slideOutVertically(tween(170)) { -it / 7 })
+                    } else {
+                        (fadeIn(tween(170)) + slideInVertically(tween(210)) { -it / 7 }) togetherWith
+                            (fadeOut(tween(130)) + slideOutVertically(tween(170)) { it / 5 })
                     }
-                )
+                },
+                label = "headerDestinationTransition"
+            ) { page ->
+                if (page == AppPage.HOME) {
+                    AngllaryTopBar(
+                        dateLabel = dateLabel,
+                        onSort = {
+                            sortMode = if (sortMode == "newest") "oldest" else "newest"
+                            galleryStore.setSortMode(sortMode)
+                        },
+                        onGrid = {
+                            gridMode = when (gridMode) {
+                                "compact" -> "comfortable"
+                                "comfortable" -> "large"
+                                else -> "compact"
+                            }
+                            galleryStore.setGridMode(gridMode)
+                        },
+                        onFavorites = { activePage = AppPage.FAVORITES },
+                        onLockedFolder = {
+                            lockedUnlocked = false
+                            activePage = AppPage.LOCKED
+                        },
+                        onTrash = { activePage = AppPage.TRASH },
+                        onSettings = { activePage = AppPage.SETTINGS }
+                    )
+                } else {
+                    SubPageHeader(
+                        title = when (page) {
+                            AppPage.SEARCH -> stringResource(R.string.search)
+                            AppPage.FAVORITES -> stringResource(R.string.favorites)
+                            AppPage.TRASH -> stringResource(R.string.recently_deleted)
+                            AppPage.LOCKED -> stringResource(R.string.locked_folder)
+                            AppPage.SETTINGS -> stringResource(R.string.settings)
+                            AppPage.ALBUM -> openedAlbum?.name.orEmpty()
+                            AppPage.HOME -> stringResource(R.string.app_name)
+                        },
+                        onBack = { navigateBack() }
+                    )
+                }
             }
 
             Box(
@@ -618,7 +631,11 @@ fun AngllaryApp(
                     }
                 }
             }
-            if (activePage == AppPage.HOME) {
+            AnimatedVisibility(
+                visible = activePage == AppPage.HOME,
+                enter = fadeIn(tween(170)) + slideInVertically(tween(220)) { it / 2 },
+                exit = fadeOut(tween(130)) + slideOutVertically(tween(170)) { it / 2 }
+            ) {
                 AngllaryBottomBar(
                     selectedTab = selectedTab,
                     onTabSelected = { selectedTab = it },
