@@ -4,9 +4,24 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Four precise viewfinder corners: a compact mark for a media-first gallery. -->
     <path
-        android:fillColor="#F1F1EF"
-        android:pathData="M26,20h56c5.5,0 10,4.5 10,10v48c0,5.5 -4.5,10 -10,10H26c-5.5,0 -10,-4.5 -10,-10V30c0,-5.5 4.5,-10 10,-10z" />
-    <path android:fillColor="#191919" android:pathData="M29,70l17,-20 11,12 9,-10 17,18H29z" />
-    <path android:fillColor="#191919" android:pathData="M76,38a7,7 0,1 1,-14 0a7,7 0,1 1,14 0" />
+        android:fillColor="#F5F5F5"
+        android:pathData="M23,23h25v8H31v17h-8z" />
+    <path
+        android:fillColor="#F5F5F5"
+        android:pathData="M60,23h25v25h-8V31H60z" />
+    <path
+        android:fillColor="#F5F5F5"
+        android:pathData="M23,60h8v17h17v8H23z" />
+    <path
+        android:fillColor="#F5F5F5"
+        android:pathData="M77,60h8v25H60v-8h17z" />
+    <!-- The centered lens aperture keeps the symbol recognizable at launcher size. -->
+    <path
+        android:fillColor="#F5F5F5"
+        android:pathData="M54,39a15,15 0,1 0,0 30a15,15 0,1 0,0 -30" />
+    <path
+        android:fillColor="#161616"
+        android:pathData="M54,48a6,6 0,1 0,0 12a6,6 0,1 0,0 -12" />
 </vector>
