@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
+import android.view.LayoutInflater
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -27,11 +28,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -46,6 +51,10 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.Replay5
+import androidx.compose.material.icons.outlined.Forward10
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -54,11 +63,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -169,7 +180,7 @@ fun MediaViewer(
         }
     }
 
-    BackHandler(onBack = ::closeViewer)
+    BackHandler(onBack = { if (detailsVisible) detailsVisible = false else closeViewer() })
 
     AnimatedVisibility(
         visible = viewerVisible,
@@ -270,18 +281,6 @@ fun MediaViewer(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    Surface(
-                        shape = CircleShape,
-                        color = ext.viewerBackground,
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
-                    ) {
-                        Text(
-                            "${pagerState.currentPage + 1} / ${media.size}",
-                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-                            color = ext.viewerOnSurface,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
                     Box {
                         IconButton(
                             onClick = {
@@ -334,47 +333,69 @@ fun MediaViewer(
             }
 
             AnimatedVisibility(
-                visible = detailsVisible && chromeVisible,
-                enter = fadeIn(tween(160)) + slideInVertically(tween(200)) { it / 5 },
-                exit = fadeOut(tween(120)) + slideOutVertically(tween(160)) { it / 5 },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 112.dp)
-                    .zIndex(2f)
+                visible = detailsVisible,
+                enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 12 },
+                exit = fadeOut(tween(140)) + slideOutVertically(tween(180)) { it / 14 },
+                modifier = Modifier.fillMaxSize().zIndex(8f)
             ) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    color = ext.viewerSurface,
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-                    shadowElevation = 12.dp
-                ) {
+                Box(Modifier.fillMaxSize().background(ext.viewerBackground)) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.fillMaxSize()
+                            .statusBarsPadding()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(18.dp)
                     ) {
-                        Text(
-                            stringResource(R.string.viewer_details),
-                            color = ext.viewerOnSurface,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        MetadataLine(stringResource(R.string.viewer_file), currentItem.displayName, ext)
-                        MetadataLine(stringResource(R.string.viewer_date), formatViewerDate(currentItem.displayDateMillis), ext)
-                        if (currentItem.width > 0 && currentItem.height > 0) {
-                            MetadataLine(stringResource(R.string.viewer_resolution), "${currentItem.width} × ${currentItem.height}", ext)
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(50.dp),
+                            color = ext.viewerSurface,
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                            shadowElevation = 10.dp
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().height(58.dp).padding(horizontal = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(onClick = { detailsVisible = false }, modifier = Modifier.size(48.dp)) {
+                                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back), tint = ext.viewerOnSurface)
+                                }
+                                Column(Modifier.weight(1f).padding(start = 5.dp)) {
+                                    Text(stringResource(R.string.viewer_details), color = ext.viewerOnSurface, style = MaterialTheme.typography.titleMedium)
+                                    Text(currentItem.displayName, color = ext.viewerMuted, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
                         }
-                        if (currentItem.sizeBytes > 0) {
-                            MetadataLine(stringResource(R.string.viewer_size), formatBytes(currentItem.sizeBytes), ext)
-                        }
-                        if (currentItem.durationMillis > 0) {
-                            MetadataLine(stringResource(R.string.viewer_duration), formatDuration(currentItem.durationMillis), ext)
-                        }
-                        if (currentItem.relativePath.isNotBlank()) {
-                            MetadataLine(stringResource(R.string.viewer_folder), currentItem.relativePath, ext)
-                        }
-                        if (currentItem.mimeType.isNotBlank()) {
-                            MetadataLine(stringResource(R.string.viewer_type), currentItem.mimeType, ext)
+                        Column(
+                            modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                currentItem.displayName,
+                                color = ext.viewerOnSurface,
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(22.dp),
+                                color = ext.viewerSurface,
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.09f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(18.dp),
+                                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    MetadataLine(stringResource(R.string.viewer_date), formatViewerDate(currentItem.displayDateMillis), ext)
+                                    if (currentItem.width > 0 && currentItem.height > 0) {
+                                        MetadataLine(stringResource(R.string.viewer_resolution), "${currentItem.width} × ${currentItem.height}", ext)
+                                    }
+                                    if (currentItem.sizeBytes > 0) MetadataLine(stringResource(R.string.viewer_size), formatBytes(currentItem.sizeBytes), ext)
+                                    if (currentItem.durationMillis > 0) MetadataLine(stringResource(R.string.viewer_duration), formatDuration(currentItem.durationMillis), ext)
+                                    if (currentItem.relativePath.isNotBlank()) MetadataLine(stringResource(R.string.viewer_folder), currentItem.relativePath, ext)
+                                    if (currentItem.mimeType.isNotBlank()) MetadataLine(stringResource(R.string.viewer_type), currentItem.mimeType, ext)
+                                    MetadataLine(stringResource(R.string.viewer_file), currentItem.displayName, ext)
+                                }
+                            }
                         }
                     }
                 }
@@ -545,61 +566,128 @@ private fun VideoContent(
             playWhenReady = false
         }
     }
+    var isPlaying by remember(item.uri) { mutableStateOf(false) }
+    var position by remember(item.uri) { mutableLongStateOf(0L) }
+    var duration by remember(item.uri) { mutableLongStateOf(item.durationMillis) }
 
-    LaunchedEffect(isActive) {
-        if (!isActive) {
-            player.pause()
+    LaunchedEffect(player, isActive) {
+        if (!isActive) player.pause()
+        while (isActive) {
+            isPlaying = player.isPlaying
+            position = player.currentPosition.coerceAtLeast(0L)
+            duration = player.duration.takeIf { it > 0L } ?: item.durationMillis
+            delay(250)
         }
+        isPlaying = false
     }
-
     DisposableEffect(player) {
         onDispose { player.release() }
     }
 
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { viewContext ->
-            PlayerView(viewContext).apply {
-                var downX = 0f
-                var downY = 0f
-                var downTime = 0L
-                setOnTouchListener { target, event ->
-                    when (event.actionMasked) {
-                        MotionEvent.ACTION_DOWN -> {
-                            downX = event.x
-                            downY = event.y
-                            downTime = System.currentTimeMillis()
-                            false
-                        }
-                        MotionEvent.ACTION_UP -> {
-                            val deltaX = event.x - downX
-                            val deltaY = event.y - downY
-                            val elapsed = System.currentTimeMillis() - downTime
-                            val horizontalSwipe =
-                                abs(deltaX) > target.width * 0.14f &&
-                                    abs(deltaX) > abs(deltaY) * 1.3f
-                            if (horizontalSwipe) {
-                                if (deltaX < 0f) onSwipeNext() else onSwipePrevious()
-                                true
-                            } else if (elapsed < 300 && abs(deltaX) < 30 && abs(deltaY) < 30) {
-                                onTap()
-                                false
-                            } else {
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { viewContext ->
+                val playerView = LayoutInflater.from(viewContext)
+                    .inflate(R.layout.viewer_player, null, false) as PlayerView
+                playerView.apply {
+                    var downX = 0f
+                    var downY = 0f
+                    var downTime = 0L
+                    setOnTouchListener { target, event ->
+                        when (event.actionMasked) {
+                            MotionEvent.ACTION_DOWN -> {
+                                downX = event.x
+                                downY = event.y
+                                downTime = System.currentTimeMillis()
                                 false
                             }
+                            MotionEvent.ACTION_UP -> {
+                                val deltaX = event.x - downX
+                                val deltaY = event.y - downY
+                                val elapsed = System.currentTimeMillis() - downTime
+                                val horizontalSwipe =
+                                    abs(deltaX) > target.width * 0.14f &&
+                                        abs(deltaX) > abs(deltaY) * 1.3f
+                                if (horizontalSwipe) {
+                                    if (deltaX < 0f) onSwipeNext() else onSwipePrevious()
+                                    true
+                                } else if (elapsed < 300 && abs(deltaX) < 30 && abs(deltaY) < 30) {
+                                    onTap()
+                                    false
+                                } else {
+                                    false
+                                }
+                            }
+                            else -> false
                         }
-                        else -> false
                     }
+                    useController = false
+                    this.player = player
                 }
-                useController = true
-                controllerAutoShow = true
-                this.player = player
-            }
-        },
-        update = { it.player = player }
-    )
-}
+            },
+            update = { it.player = player }
+        )
 
+        // Playback controls are Compose overlays, not Media3's bottom timeline.
+        // The timeline sits above Angllary's action pill and cannot be covered by it.
+        Surface(
+            modifier = Modifier.align(Alignment.Center),
+            shape = RoundedCornerShape(50.dp),
+            color = Color.Black.copy(alpha = 0.58f),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
+            shadowElevation = 8.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                IconButton(onClick = { player.seekTo((player.currentPosition - 5_000L).coerceAtLeast(0L)) }) {
+                    Icon(Icons.Outlined.Replay5, contentDescription = "Rewind 5 seconds", tint = Color.White, modifier = Modifier.size(27.dp))
+                }
+                IconButton(
+                    onClick = { if (player.isPlaying) player.pause() else player.play() },
+                    modifier = Modifier.size(54.dp)
+                ) {
+                    Icon(
+                        if (isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause video" else "Play video",
+                        tint = Color.White,
+                        modifier = Modifier.size(38.dp)
+                    )
+                }
+                IconButton(onClick = { player.seekTo((player.currentPosition + 10_000L).coerceAtMost(duration.coerceAtLeast(0L))) }) {
+                    Icon(Icons.Outlined.Forward10, contentDescription = "Forward 10 seconds", tint = Color.White, modifier = Modifier.size(27.dp))
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier.align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 118.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(formatDuration(position), color = Color.White, style = MaterialTheme.typography.labelSmall)
+                Text(formatDuration(duration), color = Color.White, style = MaterialTheme.typography.labelSmall)
+            }
+            Slider(
+                value = if (duration > 0L) (position.toFloat() / duration).coerceIn(0f, 1f) else 0f,
+                onValueChange = { progress ->
+                    if (duration > 0L) player.seekTo((progress * duration).toLong())
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
 @Composable
 private fun ViewerAction(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
