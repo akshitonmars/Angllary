@@ -17,32 +17,40 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/**
+ * Angllary uses a deliberately neutral palette.
+ *
+ * Every neutral token has identical RGB channels. This prevents subtle teal,
+ * green or warm colour casts from appearing in surfaces and text.
+ */
 private object Palette {
-    val Canvas = Color(0xFFF2F1ED)
-    val Surface = Color(0xFFFAF9F6)
-    val SurfaceDim = Color(0xFFE8E7E2)
-    val Ink = Color(0xFF242320)
-    val InkSoft = Color(0xFF484741)
-    val Muted = Color(0xFF77766F)
-    val Divider = Color(0xFFD9D8D2)
+    val Canvas = Color(0xFFF4F4F4)
+    val Surface = Color(0xFFFFFFFF)
+    val SurfaceLow = Color(0xFFEEEEEE)
+    val SurfaceHigh = Color(0xFFE5E5E5)
+    val Ink = Color(0xFF171717)
+    val InkSoft = Color(0xFF3A3A3A)
+    val Muted = Color(0xFF737373)
+    val Divider = Color(0xFFD7D7D7)
 
-    val CanvasDark = Color(0xFF151514)
-    val SurfaceDark = Color(0xFF20201E)
-    val SurfaceDimDark = Color(0xFF2B2B29)
-    val InkDark = Color(0xFFF0EFEA)
-    val InkSoftDark = Color(0xFFD0CFC8)
-    val MutedDark = Color(0xFFA6A59F)
-    val DividerDark = Color(0xFF393936)
+    val CanvasDark = Color(0xFF111111)
+    val SurfaceDark = Color(0xFF1B1B1B)
+    val SurfaceLowDark = Color(0xFF242424)
+    val SurfaceHighDark = Color(0xFF303030)
+    val InkDark = Color(0xFFF4F4F4)
+    val InkSoftDark = Color(0xFFD8D8D8)
+    val MutedDark = Color(0xFFA3A3A3)
+    val DividerDark = Color(0xFF3A3A3A)
 
-    val Error = Color(0xFF68645F)
+    val Error = Color(0xFF666666)
 }
 
-private val GoogleSans = FontFamily(Font(com.angllary.app.R.font.google_sans_flex))
+private val AngllaryFont = FontFamily(Font(com.angllary.app.R.font.google_sans_flex))
 
 private val LightColors = lightColorScheme(
     primary = Palette.Ink,
     onPrimary = Palette.Surface,
-    primaryContainer = Palette.SurfaceDim,
+    primaryContainer = Palette.SurfaceHigh,
     onPrimaryContainer = Palette.Ink,
     secondary = Palette.InkSoft,
     onSecondary = Palette.Surface,
@@ -50,9 +58,15 @@ private val LightColors = lightColorScheme(
     onBackground = Palette.Ink,
     surface = Palette.Surface,
     onSurface = Palette.Ink,
-    surfaceVariant = Palette.SurfaceDim,
+    surfaceVariant = Palette.SurfaceLow,
     onSurfaceVariant = Palette.Muted,
-    surfaceDim = Palette.SurfaceDim,
+    surfaceDim = Palette.SurfaceLow,
+    surfaceBright = Palette.Surface,
+    surfaceContainerLowest = Palette.Surface,
+    surfaceContainerLow = Palette.Canvas,
+    surfaceContainer = Palette.SurfaceLow,
+    surfaceContainerHigh = Palette.SurfaceHigh,
+    surfaceContainerHighest = Color(0xFFDDDDDD),
     outline = Palette.Divider,
     outlineVariant = Palette.Divider,
     error = Palette.Error,
@@ -62,7 +76,7 @@ private val LightColors = lightColorScheme(
 private val DarkColors = darkColorScheme(
     primary = Palette.InkDark,
     onPrimary = Palette.CanvasDark,
-    primaryContainer = Palette.SurfaceDimDark,
+    primaryContainer = Palette.SurfaceHighDark,
     onPrimaryContainer = Palette.InkDark,
     secondary = Palette.InkSoftDark,
     onSecondary = Palette.CanvasDark,
@@ -70,9 +84,15 @@ private val DarkColors = darkColorScheme(
     onBackground = Palette.InkDark,
     surface = Palette.SurfaceDark,
     onSurface = Palette.InkDark,
-    surfaceVariant = Palette.SurfaceDimDark,
+    surfaceVariant = Palette.SurfaceLowDark,
     onSurfaceVariant = Palette.MutedDark,
-    surfaceDim = Palette.SurfaceDimDark,
+    surfaceDim = Palette.CanvasDark,
+    surfaceBright = Palette.SurfaceHighDark,
+    surfaceContainerLowest = Color(0xFF0B0B0B),
+    surfaceContainerLow = Palette.SurfaceDark,
+    surfaceContainer = Palette.SurfaceLowDark,
+    surfaceContainerHigh = Palette.SurfaceHighDark,
+    surfaceContainerHighest = Color(0xFF383838),
     outline = Palette.DividerDark,
     outlineVariant = Palette.DividerDark,
     error = Palette.MutedDark,
@@ -81,30 +101,30 @@ private val DarkColors = darkColorScheme(
 
 private val AngllaryTypography = Typography().let { base ->
     base.copy(
-        displayLarge = base.displayLarge.copy(fontFamily = GoogleSans, fontWeight = FontWeight.Bold, letterSpacing = (-1.0).sp),
-        displayMedium = base.displayMedium.copy(fontFamily = GoogleSans, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
-        displaySmall = base.displaySmall.copy(fontFamily = GoogleSans, fontWeight = FontWeight.SemiBold),
-        headlineLarge = base.headlineLarge.copy(fontFamily = GoogleSans, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
-        headlineMedium = base.headlineMedium.copy(fontFamily = GoogleSans, fontSize = 25.sp, lineHeight = 31.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.45).sp),
-        headlineSmall = base.headlineSmall.copy(fontFamily = GoogleSans, fontWeight = FontWeight.SemiBold),
-        titleLarge = base.titleLarge.copy(fontFamily = GoogleSans, fontSize = 19.sp, lineHeight = 25.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.2).sp),
-        titleMedium = base.titleMedium.copy(fontFamily = GoogleSans, fontSize = 15.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold),
-        titleSmall = base.titleSmall.copy(fontFamily = GoogleSans, fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold),
-        bodyLarge = base.bodyLarge.copy(fontFamily = GoogleSans, fontSize = 15.sp, lineHeight = 22.sp),
-        bodyMedium = base.bodyMedium.copy(fontFamily = GoogleSans, fontSize = 13.sp, lineHeight = 19.sp),
-        bodySmall = base.bodySmall.copy(fontFamily = GoogleSans, fontSize = 12.sp, lineHeight = 16.sp),
-        labelLarge = base.labelLarge.copy(fontFamily = GoogleSans, fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold),
-        labelMedium = base.labelMedium.copy(fontFamily = GoogleSans, fontSize = 12.sp, fontWeight = FontWeight.Medium),
-        labelSmall = base.labelSmall.copy(fontFamily = GoogleSans, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.35.sp)
+        displayLarge = base.displayLarge.copy(fontFamily = AngllaryFont, fontWeight = FontWeight.Bold, letterSpacing = (-1.2).sp),
+        displayMedium = base.displayMedium.copy(fontFamily = AngllaryFont, fontWeight = FontWeight.Bold, letterSpacing = (-0.7).sp),
+        displaySmall = base.displaySmall.copy(fontFamily = AngllaryFont, fontWeight = FontWeight.SemiBold),
+        headlineLarge = base.headlineLarge.copy(fontFamily = AngllaryFont, fontSize = 30.sp, lineHeight = 36.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.65).sp),
+        headlineMedium = base.headlineMedium.copy(fontFamily = AngllaryFont, fontSize = 25.sp, lineHeight = 31.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.45).sp),
+        headlineSmall = base.headlineSmall.copy(fontFamily = AngllaryFont, fontSize = 21.sp, lineHeight = 27.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.25).sp),
+        titleLarge = base.titleLarge.copy(fontFamily = AngllaryFont, fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
+        titleMedium = base.titleMedium.copy(fontFamily = AngllaryFont, fontSize = 15.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold),
+        titleSmall = base.titleSmall.copy(fontFamily = AngllaryFont, fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold),
+        bodyLarge = base.bodyLarge.copy(fontFamily = AngllaryFont, fontSize = 15.sp, lineHeight = 22.sp),
+        bodyMedium = base.bodyMedium.copy(fontFamily = AngllaryFont, fontSize = 13.sp, lineHeight = 19.sp),
+        bodySmall = base.bodySmall.copy(fontFamily = AngllaryFont, fontSize = 12.sp, lineHeight = 17.sp),
+        labelLarge = base.labelLarge.copy(fontFamily = AngllaryFont, fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold),
+        labelMedium = base.labelMedium.copy(fontFamily = AngllaryFont, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
+        labelSmall = base.labelSmall.copy(fontFamily = AngllaryFont, fontSize = 10.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.25.sp)
     )
 }
 
 private val AngllaryShapes = Shapes(
-    extraSmall = RoundedCornerShape(6.dp),
-    small = RoundedCornerShape(10.dp),
-    medium = RoundedCornerShape(14.dp),
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
     large = RoundedCornerShape(20.dp),
-    extraLarge = RoundedCornerShape(28.dp)
+    extraLarge = RoundedCornerShape(26.dp)
 )
 
 data class ExtendedColors(
@@ -117,32 +137,35 @@ data class ExtendedColors(
 
 val LocalExtendedColors = staticCompositionLocalOf {
     ExtendedColors(
-        viewerBackground = Color(0xFF171715),
-        viewerSurface = Color(0xFF262624),
-        viewerOnSurface = Color(0xFFF0EFEA),
-        viewerMuted = Color(0xFFB0AFA8),
+        viewerBackground = Color(0xFF101010),
+        viewerSurface = Color(0xFF242424),
+        viewerOnSurface = Color(0xFFF4F4F4),
+        viewerMuted = Color(0xFFB0B0B0),
         scrim = Color(0x99000000)
     )
 }
 
 private val LightExtended = ExtendedColors(
-    viewerBackground = Color(0xFF191918),
-    viewerSurface = Color(0xFF292927),
-    viewerOnSurface = Color(0xFFF2F1ED),
-    viewerMuted = Color(0xFFB8B7B0),
+    viewerBackground = Color(0xFF101010),
+    viewerSurface = Color(0xFF242424),
+    viewerOnSurface = Color(0xFFF4F4F4),
+    viewerMuted = Color(0xFFB0B0B0),
     scrim = Color(0x66000000)
 )
 
 private val DarkExtended = ExtendedColors(
-    viewerBackground = Color(0xFF111110),
-    viewerSurface = Color(0xFF242422),
-    viewerOnSurface = Color(0xFFF0EFEA),
-    viewerMuted = Color(0xFFA6A59F),
+    viewerBackground = Color(0xFF090909),
+    viewerSurface = Color(0xFF202020),
+    viewerOnSurface = Color(0xFFF4F4F4),
+    viewerMuted = Color(0xFFA3A3A3),
     scrim = Color(0x99000000)
 )
 
 @Composable
-fun AngllaryTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+fun AngllaryTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit
+) {
     CompositionLocalProvider(
         LocalExtendedColors provides if (darkTheme) DarkExtended else LightExtended
     ) {
