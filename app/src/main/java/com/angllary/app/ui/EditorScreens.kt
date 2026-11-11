@@ -392,7 +392,7 @@ private fun VideoPreview(item: MediaItem, modifier: Modifier = Modifier) {
         factory = { viewContext ->
             PlayerView(viewContext).apply {
                 useController = true
-                player = this@VideoPreview.player
+                this.player = player
             }
         },
         update = { it.player = player }
