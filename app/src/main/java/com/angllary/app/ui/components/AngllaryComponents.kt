@@ -39,7 +39,7 @@ import androidx.compose.material.icons.outlined.Sort
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material.icons.outlined.VideoLibrary
-import androidx.compose.material3.BorderStroke
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
