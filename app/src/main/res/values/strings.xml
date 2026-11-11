@@ -151,4 +151,6 @@
     <string name="theme_dark">Dark</string>
     <string name="security_privacy">Security &amp; Privacy</string>
     <string name="security_privacy_summary">Your photos stay 100% on this device. No network tracking, no account required.</string>
+    <string name="open">Open</string>
+    <string name="remove_favorite">Remove favourite</string>
 </resources>
