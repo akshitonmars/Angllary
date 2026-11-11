@@ -6,6 +6,12 @@ import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.media.MediaMetadataRetriever
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +35,7 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.RotateRight
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -59,6 +66,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.angllary.app.ui.components.rememberHapticClick
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -105,12 +113,13 @@ fun PhotoEditorScreen(
                 .padding(top = 18.dp, bottom = 14.dp)
         ) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back)) }
+                IconButton(onClick = rememberHapticClick(onClose)) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back)) }
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.photo_editor), style = MaterialTheme.typography.titleLarge)
                     Text(item.displayName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
-                Button(onClick = {
+                Button(
+                    onClick = rememberHapticClick {
                     val source = bitmap
                     if (source != null && !saving) {
                         saving = true
@@ -128,7 +137,11 @@ fun PhotoEditorScreen(
                             result.onSuccess { onSaved() }.onFailure { errorMessage = it.message ?: context.getString(R.string.export_failed) }
                         }
                     }
-                }, enabled = bitmap != null && !saving) {
+                },
+                    enabled = bitmap != null && !saving,
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 15.dp, vertical = 10.dp)
+                ) {
                     if (saving) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     else {
                         Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(17.dp))
@@ -144,14 +157,21 @@ fun PhotoEditorScreen(
             ) {
                 if (bitmap == null) {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
-                    Image(
-                        bitmap = bitmap!!.asImageBitmap(),
-                        contentDescription = item.displayName,
-                        modifier = Modifier.fillMaxSize().padding(10.dp),
-                        contentScale = ContentScale.Fit,
-                        colorFilter = ColorFilter.colorMatrix(photoColorMatrix(brightness, contrast, saturation))
-                    )
+                }
+                AnimatedVisibility(
+                    visible = bitmap != null,
+                    enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.985f, animationSpec = tween(240)),
+                    exit = fadeOut(tween(120)) + scaleOut(targetScale = 0.985f, animationSpec = tween(120))
+                ) {
+                    bitmap?.let { preview ->
+                        Image(
+                            bitmap = preview.asImageBitmap(),
+                            contentDescription = item.displayName,
+                            modifier = Modifier.fillMaxSize().padding(10.dp),
+                            contentScale = ContentScale.Fit,
+                            colorFilter = ColorFilter.colorMatrix(photoColorMatrix(brightness, contrast, saturation))
+                        )
+                    }
                 }
             }
 
@@ -166,13 +186,21 @@ fun PhotoEditorScreen(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     listOf("original" to stringResource(R.string.original), "1:1" to "1:1", "4:3" to "4:3", "16:9" to "16:9").forEach { (key, label) ->
-                        FilterChip(selected = cropMode == key, onClick = { cropMode = key }, label = { Text(label) })
+                        FilterChip(
+                            selected = cropMode == key,
+                            onClick = rememberHapticClick { cropMode = key },
+                            shape = RoundedCornerShape(11.dp),
+                            label = { Text(label) }
+                        )
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.RotateRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(stringResource(R.string.rotate), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
-                    OutlinedButton(onClick = { rotateQuarterTurns = (rotateQuarterTurns + 1) % 4 }) {
+                    OutlinedButton(
+                        onClick = rememberHapticClick { rotateQuarterTurns = (rotateQuarterTurns + 1) % 4 },
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
                         Text(stringResource(R.string.rotate_90))
                     }
                 }
@@ -297,7 +325,7 @@ fun VideoTrimScreen(
     Dialog(onDismissRequest = { if (!exporting) onClose() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(top = 18.dp, bottom = 16.dp)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onClose, enabled = !exporting) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back)) }
+                IconButton(onClick = rememberHapticClick(onClose), enabled = !exporting) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back)) }
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.video_editor), style = MaterialTheme.typography.titleLarge)
                     Text(item.displayName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
@@ -318,8 +346,8 @@ fun VideoTrimScreen(
                 if (duration <= 0L) Text(stringResource(R.string.video_duration_unavailable), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 status?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 Button(
-                    onClick = {
-                        if (duration <= 0L || exporting) return@Button
+                    onClick = rememberHapticClick {
+                        if (duration <= 0L || exporting) return@rememberHapticClick
                         val startMs = (duration * startFraction).toLong()
                         val endMs = (duration * endFraction).toLong()
                         if (endMs <= startMs) return@Button
@@ -365,7 +393,8 @@ fun VideoTrimScreen(
                             }
                     },
                     enabled = duration > 0 && !exporting,
-                    modifier = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
                 ) {
                     if (exporting) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     else Text(stringResource(R.string.export_trimmed_copy))
@@ -388,7 +417,7 @@ private fun VideoPreview(item: MediaItem, modifier: Modifier = Modifier) {
     }
     androidx.compose.runtime.DisposableEffect(player) { onDispose { player.release() } }
     AndroidView(
-        modifier = modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFF171715)),
+        modifier = modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFF101010)),
         factory = { viewContext ->
             PlayerView(viewContext).apply {
                 useController = true
