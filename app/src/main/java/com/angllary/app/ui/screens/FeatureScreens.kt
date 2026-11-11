@@ -184,7 +184,7 @@ fun AlbumsScreen(
             item {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxWidth().height(216.dp * (customAlbums.size / 2 + customAlbums.size % 2).toFloat()),
+                    modifier = Modifier.fillMaxWidth().height((216f * (customAlbums.size / 2 + customAlbums.size % 2)).dp),
                     userScrollEnabled = false,
                     contentPadding = PaddingValues(bottom = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -233,7 +233,7 @@ fun AlbumsScreen(
             item {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxWidth().height(216.dp * (groups.size / 2 + groups.size % 2).toFloat()),
+                    modifier = Modifier.fillMaxWidth().height((216f * (groups.size / 2 + groups.size % 2)).dp),
                     userScrollEnabled = false,
                     contentPadding = PaddingValues(bottom = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
