@@ -195,7 +195,9 @@ fun AngllaryApp(
         else -> 132.dp
     }
 
-    val lockedFolderLabel = stringResource(R.string.locked_folder)\n\n    val activeAlbumItems = remember(media, openedAlbum, customAlbums) {
+    val lockedFolderLabel = stringResource(R.string.locked_folder)
+
+    val activeAlbumItems = remember(media, openedAlbum, customAlbums) {
         val album = openedAlbum ?: return@remember emptyList()
         when {
             album.customAlbumId != null -> {
@@ -576,7 +578,9 @@ fun AngllaryApp(
             confirmButton = {
                 TextButton(onClick = {
                     runCatching { galleryStore.createAlbum(newAlbumName) }
-                        .onSuccess {
+                        .onSuccess { album ->
+                            albumTarget?.let { target -> galleryStore.addToAlbum(album.id, target.uri.toString()) }
+                            albumTarget = null
                             storeRevision++
                             showNewAlbum = false
                         }
@@ -641,7 +645,6 @@ fun AngllaryApp(
                         }
                     }
                     TextButton(onClick = {
-                        albumTarget = null
                         newAlbumName = ""
                         showNewAlbum = true
                     }) {
