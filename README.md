@@ -14,7 +14,7 @@ Angllary is a native Android gallery designed around a quiet monochrome interfac
 - **True neutral palette:** light mode uses greys and near-white; dark mode uses greys and near-black. Every design token is grayscale—no green, teal or warm tint.
 - **Originals protected:** photo and video edits export as new files. Locked Folder imports are encrypted copies.
 
-## Features in v0.5.4
+## Features in v0.6.0
 
 ### Gallery and organisation
 - [x] Fixed photo and video deletion / trash requests by generating typed `Images` and `Video` MediaStore URIs.
