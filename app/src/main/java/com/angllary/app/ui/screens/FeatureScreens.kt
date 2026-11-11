@@ -512,28 +512,30 @@ fun LockedFolderScreen(
 
 @Composable
 private fun LockedEntryRow(entry: LockedEntry, onOpen: () -> Unit, onDelete: () -> Unit) {
-    val context = LocalContext.current
-    val previewUri by produceState<android.net.Uri?>(initialValue = null, entry.id) {
-        value = withContext(Dispatchers.IO) { runCatching { LockedFolderStore(context).decryptToCache(entry) }.getOrNull() }
-    }
     Row(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surface)
             .clickable(onClick = onOpen).padding(9.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Box(Modifier.size(64.dp).clip(RoundedCornerShape(11.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-            if (previewUri != null) {
-                AsyncImage(model = previewUri, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            } else {
-                Icon(if (entry.mimeType.startsWith("video/")) Icons.Outlined.VideoLibrary else Icons.Outlined.Image, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+        Box(
+            Modifier.size(64.dp).clip(RoundedCornerShape(11.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                if (entry.mimeType.startsWith("video/")) Icons.Outlined.VideoLibrary else Icons.Outlined.Image,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(25.dp)
+            )
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(entry.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(stringResource(R.string.encrypted_on_device), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        IconButton(onClick = onDelete) { Icon(Icons.Outlined.DeleteOutline, contentDescription = stringResource(R.string.remove)) }
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Outlined.DeleteOutline, contentDescription = stringResource(R.string.remove))
+        }
     }
 }
 
