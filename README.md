@@ -14,7 +14,7 @@ Angllary is a native Android gallery designed around a quiet monochrome interfac
 - **True neutral palette:** light mode uses greys and near-white; dark mode uses greys and near-black. Every design token is grayscale—no green, teal or warm tint.
 - **Originals protected:** photo and video edits export as new files. Locked Folder imports are encrypted copies.
 
-## Features in v0.5.0
+## Features in v0.5.1
 
 ### Gallery and organisation
 - [x] Adaptive staggered photo and video grid with consistent spacing and dimensions.
@@ -28,12 +28,13 @@ Angllary is a native Android gallery designed around a quiet monochrome interfac
 - [x] All and Albums scroll positions preserved when switching tabs and returning from Search.
 
 ### Photo and video viewing
-- [x] Full-screen media pager with next/previous swipes across photos and videos.
+- [x] Opaque activity-window media viewer (not a Dialog window), with next/previous swipes across photos and videos.
+- [x] Floating pill header and action dock remain visible, and the viewer canvas covers both system-bar edges so the gallery underneath cannot peek through.
 - [x] Photo swipes work at fit-to-screen scale; image panning takes over only after pinch zoom. Video swipes use a direction and distance threshold so normal playback taps remain usable.
 - [x] Pinch zoom and pan for photos.
 - [x] In-app video playback with Media3 controls.
 - [x] Cached video-frame thumbnails with a MediaMetadataRetriever fallback for devices whose MediaStore thumbnail provider does not return a frame.
-- [x] Share sheet, favourites, metadata, album actions and move-to-trash action.
+- [x] Share sheet, favourites, metadata, album actions and move-to-trash action. The viewer closes only after Android confirms the trash request.
 
 ### Editing and privacy
 - [x] Photo editor: crop ratios, rotate, brightness, contrast and saturation.

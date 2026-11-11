@@ -2,7 +2,7 @@
 
 ## Product feel
 
-Version 0.5.0 tightens the interface around true black/white foundations, floating pill controls and native paging.
+Version 0.5.1 completes the interface around true black/white foundations, floating pill controls and native paging.
 
 Angllary is a quiet, media-first gallery. Content is the focal point; navigation and actions are a light, consistent layer rather than heavy app chrome.
 
@@ -51,6 +51,8 @@ The brand and date in the top bar are typographic elements, not separate competi
 ## Navigation and interaction
 
 - The home dock floats above the content area; gallery and album lists reserve enough trailing scroll space to avoid hiding the last items.
+- Media viewer is drawn as an opaque activity-level Compose overlay rather than an Android Dialog window. It covers the complete edge-to-edge canvas, including system-bar regions, and prevents the underlying gallery from showing through.
+- Viewer header and action dock are persistent floating pills; the trash action remains available while Android's confirmation UI is shown.
 
 - Main header: brand at left, scroll-aware date centred, overflow menu at right.
 - Bottom dock: Search action, divider, All and Albums.
