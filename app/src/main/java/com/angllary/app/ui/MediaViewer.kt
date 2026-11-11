@@ -53,7 +53,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.scale
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -235,12 +238,7 @@ private fun ImageContent(item: MediaItem, onTap: () -> Unit) {
     AsyncImage(
         model = item.uri,
         contentDescription = item.displayName,
-        modifier = Modifier.fillMaxSize().transformable(transformState).graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-            translationX = offset.x
-            translationY = offset.y
-        }.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onTap),
+        modifier = Modifier.fillMaxSize().transformable(transformState).scale(scale).offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onTap),
         contentScale = ContentScale.Fit
     )
 }
