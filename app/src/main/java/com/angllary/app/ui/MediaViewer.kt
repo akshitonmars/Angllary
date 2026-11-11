@@ -368,7 +368,6 @@ fun MediaViewer(
                         }
                     }
                 }
-                }
             }
         }
     }
