@@ -14,7 +14,7 @@ Angllary is a native Android gallery designed around a quiet monochrome interfac
 - **True neutral palette:** light mode uses greys and near-white; dark mode uses greys and near-black. Every design token is grayscale—no green, teal or warm tint.
 - **Originals protected:** photo and video edits export as new files. Locked Folder imports are encrypted copies.
 
-## Features in v0.5.2
+## Features in v0.5.3
 
 ### Gallery and organisation
 - [x] Adaptive staggered photo and video grid with consistent spacing and dimensions.
@@ -42,13 +42,13 @@ Angllary is a native Android gallery designed around a quiet monochrome interfac
 - [x] Live frame scrubbing when adjusting video trim start and end sliders.
 - [x] Edited photos export as new copies; originals are never overwritten.
 - [x] Basic video editor: trim start/end and export a new MP4 copy.
-- [x] Edited photos export as new copies; originals are never overwritten.
-- [x] Basic video editor: trim start/end and export a new MP4 copy.
 - [x] Recently Deleted through Android's system trash confirmation where supported.
 - [x] Locked Folder with Android device authentication and AES-GCM encryption backed by Android Keystore.
 - [x] Encrypted Locked Folder archive export and restore.
 
 ### Interaction and visual polish
+- [x] Sleek monochrome gallery launcher icon: layered photograph cards with landscape peaks and sun in pure black & white.
+- [x] Adaptive and round launcher icon definitions for all modern Android launchers.
 - [x] Strict grayscale light/dark colour system.
 - [x] Unified floating navigation dock with a consistent shape and control geometry.
 - [x] Spring-based tab and tile press feedback; animated overflow icon and viewer actions.

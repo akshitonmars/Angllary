@@ -756,7 +756,7 @@ fun SettingsScreen(
             SettingsGroup(title = stringResource(R.string.about_title)) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(vertical = 4.dp)) {
                     Text(
-                        stringResource(R.string.app_version_label, "0.5.2"),
+                        stringResource(R.string.app_version_label, "0.5.3"),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
