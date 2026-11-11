@@ -78,6 +78,10 @@ class LockedFolderStore(private val context: Context) {
         return Uri.fromFile(preview)
     }
 
+    fun clearPreview(entry: LockedEntry) {
+        File(context.cacheDir, "locked_${entry.id}.${extensionFor(entry.mimeType, entry.displayName)}").delete()
+    }
+
     @Synchronized
     fun delete(entry: LockedEntry) {
         File(directory, entry.id + ".bin").delete()
