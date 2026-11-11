@@ -1,6 +1,7 @@
 package com.angllary.app.ui
 
 import android.content.Intent
+import android.view.MotionEvent
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -88,6 +89,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
@@ -388,42 +390,37 @@ private fun VideoContent(
     }
     DisposableEffect(player) { onDispose { player.release() } }
 
-    Box(Modifier.fillMaxSize()) {
-        AndroidView(
-            modifier = Modifier.fillMaxSize(),
-            factory = { viewContext ->
-                PlayerView(viewContext).apply {
-                    useController = true
-                    controllerAutoShow = true
-                    this.player = player
-                }
-            },
-            update = { it.player = player }
-        )
-
-        Box(
-            Modifier.fillMaxWidth()
-                .fillMaxHeight(0.68f)
-                .align(Alignment.Center)
-                .pointerInput(item.uri) {
-                    var distance = 0f
-                    detectHorizontalDragGestures(
-                        onHorizontalDrag = { change, dragAmount ->
-                            distance += dragAmount
-                            change.consume()
-                        },
-                        onDragEnd = {
-                            when {
-                                distance < -72f -> onSwipeNext()
-                                distance > 72f -> onSwipePrevious()
+    AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = { viewContext ->
+            PlayerView(viewContext).apply {
+                var downX = 0f
+                var downY = 0f
+                setOnTouchListener { target, event ->
+                    when (event.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            downX = event.x
+                            downY = event.y
+                        }
+                        MotionEvent.ACTION_UP -> {
+                            val deltaX = event.x - downX
+                            val deltaY = event.y - downY
+                            val centralPlaybackArea = downY in (target.height * 0.14f)..(target.height * 0.78f)
+                            if (centralPlaybackArea && abs(deltaX) > 72f && abs(deltaX) > abs(deltaY) * 1.35f) {
+                                if (deltaX < 0f) onSwipeNext() else onSwipePrevious()
                             }
-                            distance = 0f
-                        },
-                        onDragCancel = { distance = 0f }
-                    )
+                        }
+                    }
+                    // Never consume the event: PlayerView retains tap, pause and seek behaviour.
+                    false
                 }
-        )
-    }
+                useController = true
+                controllerAutoShow = true
+                this.player = player
+            }
+        },
+        update = { it.player = player }
+    )
 }
 
 @Composable
