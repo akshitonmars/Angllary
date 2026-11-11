@@ -86,6 +86,12 @@
     <string name="encrypted_on_device">Encrypted on this device</string>
     <string name="remove">Remove</string>
     <string name="locked_import_success">Encrypted copy added to Locked Folder.</string>
+    <string name="export_backup">Export backup</string>
+    <string name="restore_backup">Restore backup</string>
+    <string name="backup_same_install_note">Backups contain encrypted files only. Restore requires the same Android installation and its existing Keystore key.</string>
+    <string name="backup_export_success">Encrypted backup created (%1$d items).</string>
+    <string name="backup_restore_success">Restored %1$d private items.</string>
+    <string name="backup_failed">Could not complete the Locked Folder backup.</string>
     <string name="locked_copy_success">Private encrypted copy created. The original is unchanged.</string>
     <string name="locked_open_failed">Could not open this private item.</string>
     <string name="import_failed">Could not import this item.</string>

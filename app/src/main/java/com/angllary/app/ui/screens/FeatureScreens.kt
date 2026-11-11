@@ -457,6 +457,8 @@ fun LockedFolderScreen(
     onImport: () -> Unit,
     onOpen: (LockedEntry) -> Unit,
     onDelete: (LockedEntry) -> Unit,
+    onBackupExport: () -> Unit,
+    onBackupRestore: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier.fillMaxSize()) {
@@ -472,6 +474,27 @@ fun LockedFolderScreen(
                         Text(stringResource(R.string.add_media), color = MaterialTheme.colorScheme.surface, style = MaterialTheme.typography.labelLarge)
                     }
                 }
+            }
+        }
+
+        if (unlocked) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onBackupExport, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.export_backup))
+                    }
+                    OutlinedButton(onClick = onBackupRestore, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.restore_backup))
+                    }
+                }
+                Text(
+                    stringResource(R.string.backup_same_install_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 

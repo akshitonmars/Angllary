@@ -135,6 +135,41 @@ fun AngllaryApp(
         reloadKey++
     }
 
+    val lockedBackupExport = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching { lockedStore.exportBackup(uri) }
+                }
+                result.onSuccess { count ->
+                    showMessage(context, context.getString(R.string.backup_export_success, count))
+                }.onFailure {
+                    showMessage(context, it.message ?: context.getString(R.string.backup_failed))
+                }
+            }
+        }
+    }
+
+    val lockedBackupRestore = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching { lockedStore.restoreBackup(uri) }
+                }
+                result.onSuccess { count ->
+                    storeRevision++
+                    showMessage(context, context.getString(R.string.backup_restore_success, count))
+                }.onFailure {
+                    showMessage(context, it.message ?: context.getString(R.string.backup_failed))
+                }
+            }
+        }
+    }
+
     val lockedPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -448,6 +483,12 @@ fun AngllaryApp(
                             onDelete = {
                                 lockedStore.delete(it)
                                 storeRevision++
+                            },
+                            onBackupExport = {
+                                lockedBackupExport.launch("Angllary-Locked-Folder-Backup.zip")
+                            },
+                            onBackupRestore = {
+                                lockedBackupRestore.launch(arrayOf("application/zip", "application/octet-stream"))
                             }
                         )
 
