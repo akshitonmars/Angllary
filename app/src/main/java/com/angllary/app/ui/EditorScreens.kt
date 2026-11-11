@@ -6,12 +6,6 @@ import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.media.MediaMetadataRetriever
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -24,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -62,6 +55,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -158,20 +153,28 @@ fun PhotoEditorScreen(
                 if (bitmap == null) {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                AnimatedVisibility(
-                    visible = bitmap != null,
-                    enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.985f, animationSpec = tween(240)),
-                    exit = fadeOut(tween(120)) + scaleOut(targetScale = 0.985f, animationSpec = tween(120))
-                ) {
-                    bitmap?.let { preview ->
-                        Image(
-                            bitmap = preview.asImageBitmap(),
-                            contentDescription = item.displayName,
-                            modifier = Modifier.fillMaxSize().padding(10.dp),
-                            contentScale = ContentScale.Fit,
-                            colorFilter = ColorFilter.colorMatrix(photoColorMatrix(brightness, contrast, saturation))
-                        )
-                    }
+                val previewAlpha by animateFloatAsState(
+                    targetValue = if (bitmap != null) 1f else 0f,
+                    animationSpec = androidx.compose.animation.core.tween(220),
+                    label = "editorPreviewAlpha"
+                )
+                val previewScale by animateFloatAsState(
+                    targetValue = if (bitmap != null) 1f else 0.985f,
+                    animationSpec = androidx.compose.animation.core.spring(stiffness = 420f, dampingRatio = 0.84f),
+                    label = "editorPreviewScale"
+                )
+                bitmap?.let { preview ->
+                    Image(
+                        bitmap = preview.asImageBitmap(),
+                        contentDescription = item.displayName,
+                        modifier = Modifier.fillMaxSize().padding(10.dp).graphicsLayer {
+                            alpha = previewAlpha
+                            scaleX = previewScale
+                            scaleY = previewScale
+                        },
+                        contentScale = ContentScale.Fit,
+                        colorFilter = ColorFilter.colorMatrix(photoColorMatrix(brightness, contrast, saturation))
+                    )
                 }
             }
 
