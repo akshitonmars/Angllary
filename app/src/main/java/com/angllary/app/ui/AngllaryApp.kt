@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -194,7 +195,7 @@ fun AngllaryApp(
         else -> 132.dp
     }
 
-    val activeAlbumItems = remember(media, openedAlbum, customAlbums) {
+    val lockedFolderLabel = stringResource(R.string.locked_folder)\n\n    val activeAlbumItems = remember(media, openedAlbum, customAlbums) {
         val album = openedAlbum ?: return@remember emptyList()
         when {
             album.customAlbumId != null -> {
@@ -425,7 +426,7 @@ fun AngllaryApp(
                                                 dateTakenMillis = 0L,
                                                 width = 0,
                                                 height = 0,
-                                                albumName = stringResource(R.string.locked_folder),
+                                                albumName = lockedFolderLabel,
                                                 bucketId = "",
                                                 relativePath = "",
                                                 sizeBytes = entry.encryptedSize,
@@ -521,6 +522,13 @@ fun AngllaryApp(
             },
             onLockCopy = { importIntoLockedFolder(it) },
             onAddToAlbum = { albumTarget = it },
+            onRemoveFromAlbum = { item ->
+                openedAlbum?.customAlbumId?.let { id ->
+                    galleryStore.removeFromAlbum(id, item.uri.toString())
+                    storeRevision++
+                    showMessage(context, context.getString(R.string.removed_from_album))
+                }
+            },
             onDismiss = {
                 viewerIndex = null
                 lockedPreviewEntry?.let(lockedStore::clearPreview)
@@ -641,7 +649,7 @@ fun AngllaryApp(
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { albumTarget = null }) { Text(stringResource(R.string.close) } }
+            confirmButton = { TextButton(onClick = { albumTarget = null }) { Text(stringResource(R.string.close)) } }
         )
     }
 }
