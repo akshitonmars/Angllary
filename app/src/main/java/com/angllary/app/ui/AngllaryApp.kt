@@ -51,6 +51,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -142,6 +143,16 @@ fun AngllaryApp(
     }
     val homeGridState = rememberLazyStaggeredGridState()
     val albumsListState = rememberLazyListState()
+
+    val headerIsScrolled by remember {
+        derivedStateOf {
+            if (selectedTab == MainTab.ALL) {
+                homeGridState.firstVisibleItemIndex > 0 || homeGridState.firstVisibleItemScrollOffset > 36
+            } else {
+                albumsListState.firstVisibleItemIndex > 0 || albumsListState.firstVisibleItemScrollOffset > 36
+            }
+        }
+    }
     var activePage by remember { mutableStateOf(AppPage.HOME) }
     var openedAlbum by remember { mutableStateOf<OpenAlbum?>(null) }
     var dateLabel by remember { mutableStateOf(context.getString(R.string.today)) }
@@ -415,19 +426,7 @@ fun AngllaryApp(
             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
         ) {
         Column(Modifier.fillMaxSize()) {
-            androidx.compose.material3.Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp,
-                shadowElevation = 3.dp,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                )
-            ) {
-                Box(Modifier.statusBarsPadding()) {
-                    AnimatedContent(
+            AnimatedContent(
                         targetState = activePage,
                         transitionSpec = {
                             if (targetState.ordinal >= initialState.ordinal) {
@@ -443,6 +442,8 @@ fun AngllaryApp(
                         if (page == AppPage.HOME) {
                             AngllaryTopBar(
                                 dateLabel = dateLabel,
+                                showDate = selectedTab == MainTab.ALL,
+                                isScrolled = headerIsScrolled,
                                 onSort = {
                                     sortMode = if (sortMode == "newest") "oldest" else "newest"
                                     galleryStore.setSortMode(sortMode)
@@ -478,8 +479,6 @@ fun AngllaryApp(
                             )
                         }
                     }
-                }
-            }
 
             Box(
                 Modifier.weight(1f).fillMaxWidth().graphicsLayer {
@@ -532,6 +531,7 @@ fun AngllaryApp(
                                         onRequestPermission = { permissionLauncher.launch(mediaPermissions()) },
                                         onDateChanged = { dateLabel = formatDateLabel(it.displayDateMillis, context) },
                                         onMediaClick = { openViewer(it, orderedMedia) },
+                                        onFavoriteToggle = { updateFavorite(it) },
                                         gridState = homeGridState
                                     )
                                     MainTab.ALBUMS -> AlbumsScreen(
@@ -567,7 +567,6 @@ fun AngllaryApp(
                         )
 
                         AppPage.FAVORITES -> SimpleAlbumScreen(
-                            title = stringResource(R.string.favorites),
                             media = orderedMedia.filter { it.uri.toString() in favoriteUris || "content://media/external/file/${it.id}" in favoriteUris },
                             favoriteUris = favoriteUris,
                             minCellSize = gridCellSize,
@@ -653,7 +652,6 @@ fun AngllaryApp(
                         )
 
                         AppPage.ALBUM -> SimpleAlbumScreen(
-                            title = openedAlbum?.name.orEmpty(),
                             media = activeAlbumItems,
                             favoriteUris = favoriteUris,
                             minCellSize = gridCellSize,
