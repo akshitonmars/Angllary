@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.media.MediaMetadataRetriever
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
@@ -29,6 +31,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.RotateRight
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -39,6 +42,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
@@ -102,38 +107,50 @@ fun PhotoEditorScreen(
     var saturation by remember(item.uri) { mutableFloatStateOf(1f) }
     var saving by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showingOriginal by remember { mutableStateOf(false) }
+    var showExitPrompt by remember { mutableStateOf(false) }
+    val hasUnsavedEdits = rotateQuarterTurns != 0 || cropMode != "original" ||
+        brightness != 0f || contrast != 1f || saturation != 1f
 
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    fun saveChanges() {
+        val source = bitmap
+        if (source == null || saving) return
+        saving = true
+        errorMessage = null
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val edited = renderEditedBitmap(source, rotateQuarterTurns, cropMode, brightness, contrast, saturation)
+                    MediaExportRepository(context).saveImage(edited, item.displayName).also {
+                        if (edited !== source) edited.recycle()
+                    }
+                }
+            }
+            saving = false
+            result.onSuccess { onSaved() }.onFailure {
+                errorMessage = it.message ?: context.getString(R.string.export_failed)
+            }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = { if (hasUnsavedEdits) showExitPrompt = true else onClose() },
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Column(
             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
                 .padding(top = 18.dp, bottom = 14.dp)
         ) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = rememberHapticClick(onClose)) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back)) }
+                IconButton(onClick = rememberHapticClick { if (hasUnsavedEdits) showExitPrompt = true else onClose() }) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back))
+                }
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.photo_editor), style = MaterialTheme.typography.titleLarge)
                     Text(item.displayName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
                 Button(
-                    onClick = rememberHapticClick {
-                    val source = bitmap
-                    if (source != null && !saving) {
-                        saving = true
-                        errorMessage = null
-                        scope.launch {
-                            val result = withContext(Dispatchers.IO) {
-                                runCatching {
-                                    val edited = renderEditedBitmap(source, rotateQuarterTurns, cropMode, brightness, contrast, saturation)
-                                    MediaExportRepository(context).saveImage(edited, item.displayName).also {
-                                        if (edited !== source) edited.recycle()
-                                    }
-                                }
-                            }
-                            saving = false
-                            result.onSuccess { onSaved() }.onFailure { errorMessage = it.message ?: context.getString(R.string.export_failed) }
-                        }
-                    }
-                },
+                    onClick = rememberHapticClick { saveChanges() },
                     enabled = bitmap != null && !saving,
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 15.dp, vertical = 10.dp)
@@ -177,10 +194,10 @@ fun PhotoEditorScreen(
                             alpha = previewAlpha
                             scaleX = previewScale
                             scaleY = previewScale
-                            rotationZ = previewRotation
+                            rotationZ = if (showingOriginal) 0f else previewRotation
                         },
                         contentScale = ContentScale.Fit,
-                        colorFilter = ColorFilter.colorMatrix(photoColorMatrix(brightness, contrast, saturation))
+                        colorFilter = if (showingOriginal) null else ColorFilter.colorMatrix(photoColorMatrix(brightness, contrast, saturation))
                     )
                 }
             }
@@ -190,6 +207,26 @@ fun PhotoEditorScreen(
                     .padding(horizontal = 20.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).pointerInput(item.uri) {
+                        detectTapGestures(onPress = {
+                            showingOriginal = true
+                            tryAwaitRelease()
+                            showingOriginal = false
+                        })
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Box(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            if (showingOriginal) "Original preview" else "Press and hold to compare with original",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Outlined.Crop, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(stringResource(R.string.crop_ratio), style = MaterialTheme.typography.titleSmall)
@@ -221,6 +258,25 @@ fun PhotoEditorScreen(
                 Text(stringResource(R.string.editor_save_note), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             }
         }
+    }
+
+    if (showExitPrompt) {
+        AlertDialog(
+            onDismissRequest = { showExitPrompt = false },
+            title = { Text("Unsaved edits") },
+            text = { Text("Save your changes as a copy, discard them, or keep editing.") },
+            confirmButton = {
+                TextButton(onClick = { showExitPrompt = false; saveChanges() }, enabled = bitmap != null && !saving) {
+                    Text("Save copy")
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { showExitPrompt = false; onClose() }) { Text("Discard") }
+                    TextButton(onClick = { showExitPrompt = false }) { Text("Keep editing") }
+                }
+            }
+        )
     }
 }
 

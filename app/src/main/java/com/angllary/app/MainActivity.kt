@@ -1,6 +1,9 @@
 package com.angllary.app
 
+import android.app.Activity
+import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -19,17 +22,20 @@ import com.angllary.app.ui.theme.AngllaryTheme
 import com.angllary.app.util.AppIconManager
 
 class MainActivity : FragmentActivity() {
+    private val incomingIntentState = mutableStateOf<Intent?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val galleryStore = GalleryStore(applicationContext)
         val initialThemeMode = galleryStore.themeMode()
         val isSystemDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         val isLight = when (initialThemeMode) {
             "light" -> true
-            "dark" -> false
+            "dark", "amoled" -> false
             else -> !isSystemDark
         }
         setTheme(if (isLight) R.style.Theme_Angllary_Light else R.style.Theme_Angllary_Dark)
         super.onCreate(savedInstanceState)
+        incomingIntentState.value = intent
         enableEdgeToEdge()
         AppIconManager.syncIconWithTheme(applicationContext, initialThemeMode, isSystemDark)
 
@@ -38,7 +44,7 @@ class MainActivity : FragmentActivity() {
             val systemDark = isSystemInDarkTheme()
             val darkTheme = when (themeMode) {
                 "light" -> false
-                "dark" -> true
+                "dark", "amoled" -> true
                 else -> systemDark
             }
 
@@ -49,7 +55,7 @@ class MainActivity : FragmentActivity() {
                 }
             }
 
-            AngllaryTheme(darkTheme = darkTheme) {
+            AngllaryTheme(darkTheme = darkTheme, pureBlack = themeMode == "amoled") {
                 val repository = remember { MediaStoreRepository(contentResolver) }
                 AngllaryApp(
                     repository = repository,
@@ -57,9 +63,24 @@ class MainActivity : FragmentActivity() {
                     onThemeModeChange = {
                         themeMode = it
                         AppIconManager.syncIconWithTheme(applicationContext, it, systemDark)
+                    },
+                    incomingIntent = incomingIntentState.value,
+                    onPickerResult = { uri ->
+                        val result = Intent().apply {
+                            setData(uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        setResult(Activity.RESULT_OK, result)
+                        finish()
                     }
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        incomingIntentState.value = intent
     }
 }

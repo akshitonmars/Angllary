@@ -1,5 +1,21 @@
 package com.angllary.app.ui.components
 
+import kotlinx.coroutines.launch
+
+import androidx.compose.runtime.rememberCoroutineScope
+
+import androidx.compose.ui.semantics.stateDescription
+
+import androidx.compose.ui.semantics.semantics
+
+import androidx.compose.ui.semantics.role
+
+import androidx.compose.ui.semantics.contentDescription
+
+import androidx.compose.ui.input.pointer.pointerInput
+
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+
 import android.view.HapticFeedbackConstants
 import android.content.Intent
 import androidx.compose.animation.animateColorAsState
@@ -379,17 +395,19 @@ fun MediaGrid(
     onMediaClick: (MediaItem) -> Unit,
     onFavoriteToggle: (MediaItem) -> Unit = {},
     onSelectionActiveChange: (Boolean) -> Unit = {},
+    selectedUris: Set<String> = emptySet(),
+    onSelectionChange: (Set<String>) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val localView = LocalView.current
-    var focusedItem by remember { mutableStateOf<MediaItem?>(null) }
-    var focusedMenuExpanded by remember { mutableStateOf(false) }
-    val blurRadius by animateDpAsState(
-        targetValue = if (focusedItem != null) 17.dp else 0.dp,
-        animationSpec = spring(stiffness = 360f, dampingRatio = 0.88f),
-        label = "selectionBackgroundBlur"
-    )
+    val scope = rememberCoroutineScope()
+    var scrubbing by remember { mutableStateOf(false) }
+    var scrubIndex by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var scrubDate by remember { mutableStateOf("") }
+
+    LaunchedEffect(selectedUris) {
+        onSelectionActiveChange(selectedUris.isNotEmpty())
+    }
     LaunchedEffect(media, state) {
         snapshotFlow { state.layoutInfo.visibleItemsInfo.minByOrNull { it.index }?.index }
             .distinctUntilChanged()
@@ -398,240 +416,195 @@ fun MediaGrid(
             }
     }
 
-    LazyVerticalStaggeredGrid(
-        columns = StaggeredGridCells.Adaptive(minSize = minCellSize),
-        state = state,
-        modifier = modifier.fillMaxSize().blur(blurRadius),
-        contentPadding = PaddingValues(start = 5.dp, end = 5.dp, top = 4.dp, bottom = 124.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalItemSpacing = 4.dp
-    ) {
-        items(
-            items = media,
-            key = { it.uri.toString() },
-            contentType = { if (it.isVideo) "video" else "photo" }
-        ) { item ->
-            val ratio = if (item.width > 0 && item.height > 0) {
-                (item.width.toFloat() / item.height.toFloat()).coerceIn(0.58f, 1.72f)
-            } else if (item.isVideo) 1.14f else 0.9f
+    Box(modifier.fillMaxSize()) {
+        LazyVerticalStaggeredGrid(
+            columns = StaggeredGridCells.Adaptive(minSize = minCellSize),
+            state = state,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 5.dp, end = 5.dp, top = 4.dp, bottom = 124.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalItemSpacing = 4.dp
+        ) {
+            items(
+                items = media,
+                key = { it.uri.toString() },
+                contentType = { if (it.isVideo) "video" else "photo" }
+            ) { item ->
+                val uriKey = item.uri.toString()
+                val selected = uriKey in selectedUris
+                val ratio = if (item.width > 0 && item.height > 0) {
+                    (item.width.toFloat() / item.height.toFloat()).coerceIn(0.58f, 1.72f)
+                } else if (item.isVideo) 1.14f else 0.9f
 
-            val source = remember(item.uri) { MutableInteractionSource() }
-            val pressed by source.collectIsPressedAsState()
-            val scale by animateFloatAsState(
-                targetValue = if (pressed) 0.975f else 1f,
-                animationSpec = spring(stiffness = 680f, dampingRatio = 0.78f),
-                label = "mediaTilePress"
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(ratio)
-                    .graphicsLayer { scaleX = scale; scaleY = scale }
-                    .clip(RoundedCornerShape(13.dp))
-                    .combinedClickable(
-                        interactionSource = source,
-                        indication = null,
-                        onClick = rememberHapticClick { onMediaClick(item) },
-                        onLongClick = {
-                            localView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                            focusedItem = item
-                            focusedMenuExpanded = false
-                            onSelectionActiveChange(true)
-                        }
-                    )
-            ) {
-                MediaThumbnail(
-                    item = item,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                val source = remember(item.uri) { MutableInteractionSource() }
+                val pressed by source.collectIsPressedAsState()
+                val scale by animateFloatAsState(
+                    targetValue = if (selected) 0.965f else if (pressed) 0.975f else 1f,
+                    animationSpec = spring(stiffness = 680f, dampingRatio = 0.82f),
+                    label = "mediaTilePress"
                 )
 
-                if (item.isVideo) {
-                    Row(
-                        modifier = Modifier.align(Alignment.BottomStart).padding(7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color.Black.copy(alpha = 0.62f)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(ratio)
+                        .graphicsLayer { scaleX = scale; scaleY = scale }
+                        .clip(RoundedCornerShape(13.dp))
+                        .combinedClickable(
+                            interactionSource = source,
+                            indication = null,
+                            onClick = {
+                                if (selectedUris.isNotEmpty()) {
+                                    val next = selectedUris.toMutableSet()
+                                    if (selected) next.remove(uriKey) else next.add(uriKey)
+                                    onSelectionChange(next)
+                                } else onMediaClick(item)
+                            },
+                            onLongClick = {
+                                localView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                val next = selectedUris.toMutableSet()
+                                if (!selected) next.add(uriKey)
+                                onSelectionChange(next)
+                            }
+                        )
+                        .semantics {
+                            contentDescription = (if (item.isVideo) "Video" else "Photo") +
+                                ", " + item.displayName + ", " +
+                                java.text.SimpleDateFormat("d MMMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(item.displayDateMillis))
+                            role = androidx.compose.ui.semantics.Role.Button
+                            if (selected) stateDescription = "Selected"
+                        }
+                ) {
+                    MediaThumbnail(
+                        item = item,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+
+                    if (item.isVideo) {
+                        Row(
+                            modifier = Modifier.align(Alignment.BottomStart).padding(7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color.Black.copy(alpha = 0.62f)
                             ) {
-                                Icon(
-                                    Icons.Outlined.VideoLibrary,
-                                    contentDescription = stringResource(R.string.video),
-                                    tint = Color.White,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                if (item.durationMillis > 0L) {
-                                    Text(
-                                        formatDuration(item.durationMillis),
-                                        color = Color.White,
-                                        style = MaterialTheme.typography.labelSmall
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.VideoLibrary,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(12.dp)
                                     )
+                                    if (item.durationMillis > 0L) {
+                                        Text(
+                                            formatDuration(item.durationMillis),
+                                            color = Color.White,
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (favoriteUris.contains(uriKey) || favoriteUris.contains("content://media/external/file/${item.id}")) {
+                        Surface(
+                            modifier = Modifier.align(Alignment.TopEnd).padding(7.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.Black.copy(alpha = 0.58f)
+                        ) {
+                            Icon(
+                                Icons.Outlined.Star,
+                                contentDescription = stringResource(R.string.favorited),
+                                tint = Color.White,
+                                modifier = Modifier.padding(5.dp).size(13.dp)
+                            )
+                        }
+                    }
+
+                    if (selected) {
+                        Box(
+                            Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.28f)),
+                            contentAlignment = Alignment.TopStart
+                        ) {
+                            Surface(
+                                modifier = Modifier.padding(8.dp).size(25.dp),
+                                shape = CircleShape,
+                                color = Color.White,
+                                contentColor = Color.Black
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text("✓", style = MaterialTheme.typography.labelLarge)
                                 }
                             }
                         }
                     }
                 }
-
-                if (favoriteUris.contains(item.uri.toString()) || favoriteUris.contains("content://media/external/file/${item.id}")) {
-                    Surface(
-                        modifier = Modifier.align(Alignment.TopEnd).padding(7.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color.Black.copy(alpha = 0.58f)
-                    ) {
-                        Icon(
-                            Icons.Outlined.Star,
-                            contentDescription = stringResource(R.string.favorited),
-                            tint = Color.White,
-                            modifier = Modifier.padding(5.dp).size(13.dp)
-                        )
-                    }
-                }
             }
         }
-    }
 
-    focusedItem?.let { selected ->
-        val ratio = if (selected.width > 0 && selected.height > 0) {
-            (selected.width.toFloat() / selected.height.toFloat()).coerceIn(0.62f, 1.55f)
-        } else if (selected.isVideo) 1.2f else 0.92f
-        val focusScale by animateFloatAsState(
-            targetValue = 1f,
-            animationSpec = spring(stiffness = 300f, dampingRatio = 0.78f),
-            label = "selectedMediaScale"
-        )
-        Box(
-            modifier = Modifier.fillMaxSize().zIndex(10f)
-                .background(Color.Black.copy(alpha = 0.62f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {
-                    focusedItem = null
-                    focusedMenuExpanded = false
-                    onSelectionActiveChange(false)
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(0.86f).graphicsLayer {
-                    scaleX = focusScale
-                    scaleY = focusScale
-                }.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {},
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+        if (media.size >= 40) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 3.dp)
+                    .width(30.dp)
+                    .height(150.dp)
+                    .pointerInput(media) {
+                        detectVerticalDragGestures(
+                            onDragStart = { offset ->
+                                scrubbing = true
+                                val fraction = (offset.y / size.height.toFloat()).coerceIn(0f, 1f)
+                                scrubIndex = (fraction * (media.lastIndex).coerceAtLeast(0)).toInt()
+                                scrubDate = media.getOrNull(scrubIndex)?.let {
+                                    java.text.SimpleDateFormat("MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(it.displayDateMillis))
+                                }.orEmpty()
+                                scope.launch { state.scrollToItem(scrubIndex) }
+                            },
+                            onVerticalDrag = { change, _ ->
+                                change.consume()
+                                val fraction = (change.position.y / size.height.toFloat()).coerceIn(0f, 1f)
+                                val nextIndex = (fraction * media.lastIndex.coerceAtLeast(0)).toInt()
+                                if (nextIndex != scrubIndex) {
+                                    val nextDate = media.getOrNull(nextIndex)?.let {
+                                        java.text.SimpleDateFormat("MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(it.displayDateMillis))
+                                    }.orEmpty()
+                                    if (nextDate != scrubDate) {
+                                        localView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                        scrubDate = nextDate
+                                    }
+                                    scrubIndex = nextIndex
+                                    scope.launch { state.scrollToItem(nextIndex) }
+                                }
+                            },
+                            onDragEnd = { scrubbing = false },
+                            onDragCancel = { scrubbing = false }
+                        )
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().aspectRatio(ratio)
-                        .clip(RoundedCornerShape(23.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    MediaThumbnail(
-                        item = selected,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                    if (selected.isVideo) {
-                        Surface(
-                            modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
-                            shape = RoundedCornerShape(9.dp),
-                            color = Color.Black.copy(alpha = 0.74f)
-                        ) {
-                            Text(
-                                formatDuration(selected.durationMillis),
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
-                                color = Color.White,
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
-                    }
-                    Surface(
-                        modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).size(40.dp),
-                        shape = CircleShape,
-                        color = Color.Black.copy(alpha = 0.62f)
-                    ) {
-                        IconButton(onClick = {
-                            focusedItem = null
-                            focusedMenuExpanded = false
-                            onSelectionActiveChange(false)
-                        }) {
-                            Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.close), tint = Color.White)
-                        }
-                    }
-                }
-
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    shadowElevation = 20.dp
+                    shape = RoundedCornerShape(50.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f))
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(start = 17.dp, end = 7.dp, top = 8.dp, bottom = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(Modifier.width(5.dp).height(116.dp).padding(1.dp).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f), RoundedCornerShape(50.dp)))
+                }
+                if (scrubbing) {
+                    Surface(
+                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 36.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                     ) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(selected.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(
-                                selected.albumName.ifBlank { selected.relativePath.ifBlank { if (selected.isVideo) "Video" else "Photo" } },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        IconButton(onClick = rememberHapticClick { onMediaClick(selected); focusedItem = null; onSelectionActiveChange(false) }) {
-                            Icon(Icons.Outlined.OpenInFull, contentDescription = stringResource(R.string.open))
-                        }
-                        Box {
-                            IconButton(onClick = rememberHapticClick { focusedMenuExpanded = true }) {
-                                Icon(Icons.Outlined.MoreHoriz, contentDescription = stringResource(R.string.more_options))
-                            }
-                            DropdownMenu(
-                                expanded = focusedMenuExpanded,
-                                onDismissRequest = { focusedMenuExpanded = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.open)) },
-                                    onClick = {
-                                        focusedMenuExpanded = false
-                                        focusedItem = null
-                                        onSelectionActiveChange(false)
-                                        onMediaClick(selected)
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.share)) },
-                                    onClick = {
-                                        focusedMenuExpanded = false
-                                        val send = Intent(Intent.ACTION_SEND).apply {
-                                            type = selected.mimeType.ifBlank { if (selected.isVideo) "video/*" else "image/*" }
-                                            putExtra(Intent.EXTRA_STREAM, selected.uri)
-                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        }
-                                        runCatching { context.startActivity(Intent.createChooser(send, null)) }
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(if (favoriteUris.contains(selected.uri.toString())) stringResource(R.string.remove_favorite) else stringResource(R.string.favorite)) },
-                                    onClick = {
-                                        focusedMenuExpanded = false
-                                        onFavoriteToggle(selected)
-                                    }
-                                )
-                            }
-                        }
+                        Text(scrubDate, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp), style = MaterialTheme.typography.labelLarge, maxLines = 1)
                     }
                 }
             }

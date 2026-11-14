@@ -3,6 +3,9 @@ package com.angllary.app.ui
 import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.view.WindowManager
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.os.Build
@@ -35,6 +38,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.statusBars
@@ -53,7 +58,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -104,13 +113,15 @@ import java.util.Date
 import java.util.Locale
 
 private enum class AppPage { HOME, SEARCH, FAVORITES, TRASH, LOCKED, SETTINGS, ALBUM }
-private data class OpenAlbum(val name: String, val deviceBucketId: String? = null, val customAlbumId: String? = null)
+private data class OpenAlbum(val name: String, val deviceBucketId: String? = null, val customAlbumId: String? = null, val quickFilter: String? = null)
 
 @Composable
 fun AngllaryApp(
     repository: MediaStoreRepository,
     galleryStore: GalleryStore,
-    onThemeModeChange: (String) -> Unit
+    onThemeModeChange: (String) -> Unit,
+    incomingIntent: Intent? = null,
+    onPickerResult: (Uri) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -118,6 +129,7 @@ fun AngllaryApp(
 
     var hasPermission by remember { mutableStateOf(hasMediaAccess(context)) }
     var isLoading by remember { mutableStateOf(false) }
+    var libraryReady by remember { mutableStateOf(false) }
     var reloadKey by remember { mutableIntStateOf(0) }
     var storeRevision by remember { mutableIntStateOf(0) }
 
@@ -161,6 +173,14 @@ fun AngllaryApp(
     var openedAlbum by remember { mutableStateOf<OpenAlbum?>(null) }
     var dateLabel by remember { mutableStateOf(context.getString(R.string.today)) }
     var mediaSelectionActive by remember { mutableStateOf(false) }
+    var selectedUris by remember { mutableStateOf(emptySet<String>()) }
+    var externalViewer by remember { mutableStateOf(incomingIntent?.action == Intent.ACTION_VIEW || incomingIntent?.action == Intent.ACTION_SEND || incomingIntent?.action == Intent.ACTION_SEND_MULTIPLE) }
+    var pickerRequest by remember { mutableStateOf(incomingIntent?.action == Intent.ACTION_PICK || incomingIntent?.action == Intent.ACTION_GET_CONTENT) }
+    var pendingFavoriteChanges by remember { mutableStateOf(emptyList<Pair<MediaItem, Boolean>>()) }
+    var pendingTrashUndoItems by remember { mutableStateOf(emptyList<MediaItem>()) }
+    var pendingUndoRestoreItems by remember { mutableStateOf(emptyList<MediaItem>()) }
+    var openRecentVideoShortcut by remember { mutableStateOf(incomingIntent?.action == "com.angllary.app.action.RECENT_VIDEO") }
+    val snackbarHostState = remember { SnackbarHostState() }
     var sortMode by remember { mutableStateOf(galleryStore.sortMode()) }
     var gridMode by remember { mutableStateOf(galleryStore.gridMode()) }
     var themeMode by remember { mutableStateOf(galleryStore.themeMode()) }
@@ -174,10 +194,52 @@ fun AngllaryApp(
 
     var showNewAlbum by remember { mutableStateOf(false) }
     var newAlbumName by remember { mutableStateOf("") }
-    var albumTarget by remember { mutableStateOf<MediaItem?>(null) }
+    var albumTargets by remember { mutableStateOf(emptyList<MediaItem>()) }
     var editAlbumTarget by remember { mutableStateOf<CustomAlbum?>(null) }
     var renameAlbumValue by remember { mutableStateOf("") }
     var lockedUnlocked by remember { mutableStateOf(false) }
+
+    LaunchedEffect(incomingIntent) {
+        when (incomingIntent?.action) {
+            Intent.ACTION_VIEW, Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE -> {
+                externalViewer = true
+                pickerRequest = false
+                @Suppress("DEPRECATION")
+                val uris = when (incomingIntent.action) {
+                    Intent.ACTION_SEND_MULTIPLE -> incomingIntent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM).orEmpty()
+                    Intent.ACTION_SEND -> listOfNotNull(incomingIntent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM))
+                    else -> listOfNotNull(incomingIntent.data)
+                }.ifEmpty { listOfNotNull(incomingIntent.data) }
+                val incomingItems = withContext(Dispatchers.IO) {
+                    uris.distinct().mapNotNull { readIncomingMediaItem(context, it) }
+                }
+                if (incomingItems.isNotEmpty()) {
+                    viewerItems = incomingItems
+                    viewerIndex = 0
+                } else {
+                    externalViewer = false
+                    showMessage(context, "Angllary could not open this media item.")
+                }
+            }
+            Intent.ACTION_PICK, Intent.ACTION_GET_CONTENT -> {
+                pickerRequest = true
+                externalViewer = false
+            }
+            "com.angllary.app.action.SEARCH" -> {
+                activePage = AppPage.SEARCH
+                externalViewer = false
+            }
+            "com.angllary.app.action.LOCKED_FOLDER" -> {
+                lockedUnlocked = false
+                activePage = AppPage.LOCKED
+                externalViewer = false
+            }
+            "com.angllary.app.action.RECENT_VIDEO" -> {
+                openRecentVideoShortcut = true
+                externalViewer = false
+            }
+        }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -189,11 +251,35 @@ fun AngllaryApp(
     val systemMediaAction = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
+        if (pendingFavoriteChanges.isNotEmpty()) {
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                pendingFavoriteChanges.forEach { (item, favorite) ->
+                    repository.setSystemFavorite(item, favorite)
+                    galleryStore.setFavorite(item.uri.toString(), favorite)
+                    galleryStore.setFavorite("content://media/external/file/${item.id}", favorite)
+                }
+                favoriteUris = galleryStore.favoriteUris() + media.filter { it.isSystemFavorite }.map { it.uri.toString() }
+            }
+            pendingFavoriteChanges = emptyList()
+        }
+        if (pendingTrashUndoItems.isNotEmpty()) {
+            val recentlyTrashed = pendingTrashUndoItems
+            pendingTrashUndoItems = emptyList()
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                scope.launch {
+                    val action = snackbarHostState.showSnackbar(
+                        message = if (recentlyTrashed.size == 1) "Moved to Recently Deleted" else "${recentlyTrashed.size} items moved to Recently Deleted",
+                        actionLabel = "Undo"
+                    )
+                    if (action == SnackbarResult.ActionPerformed) {
+                        pendingUndoRestoreItems = recentlyTrashed
+                    }
+                }
+            }
+        }
         reloadKey++
         if (closeViewerAfterTrash) {
-            if (result.resultCode == android.app.Activity.RESULT_OK) {
-                viewerIndex = null
-            }
+            if (result.resultCode == android.app.Activity.RESULT_OK) viewerIndex = null
             closeViewerAfterTrash = false
         }
     }
@@ -255,16 +341,23 @@ fun AngllaryApp(
         }
     }
 
-    LaunchedEffect(hasPermission, reloadKey) {
+    LaunchedEffect(hasPermission, reloadKey, externalViewer) {
+        if (externalViewer) {
+            isLoading = false
+            return@LaunchedEffect
+        }
         if (!hasPermission) {
             media = emptyList()
             trash = emptyList()
+            libraryReady = false
             return@LaunchedEffect
         }
         isLoading = true
+        libraryReady = false
         try {
             val loaded = withContext(Dispatchers.IO) { repository.loadMedia() }
             media = loaded.sortedByDescending { it.displayDateMillis }
+            favoriteUris = galleryStore.favoriteUris() + loaded.filter { it.isSystemFavorite }.map { it.uri.toString() }
             trash = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 withContext(Dispatchers.IO) { repository.loadMedia(trashed = true) }
                     .sortedByDescending { it.displayDateMillis }
@@ -275,7 +368,7 @@ fun AngllaryApp(
     }
 
     LaunchedEffect(storeRevision) {
-        favoriteUris = galleryStore.favoriteUris()
+        favoriteUris = galleryStore.favoriteUris() + media.filter { it.isSystemFavorite }.map { it.uri.toString() }
         customAlbums = galleryStore.customAlbums()
         lockedEntries = lockedStore.entries()
         sortMode = galleryStore.sortMode()
@@ -289,6 +382,23 @@ fun AngllaryApp(
         }
     }
 
+    val selectedMedia = remember(orderedMedia, selectedUris) {
+        orderedMedia.filter { it.uri.toString() in selectedUris }
+    }
+
+    DisposableEffect(activePage, lockedUnlocked, lockedPreviewEntry) {
+        val activity = context as? android.app.Activity
+        val window = activity?.window
+        val previouslySecure = window?.attributes?.flags?.and(WindowManager.LayoutParams.FLAG_SECURE) != 0
+        val shouldSecure = (activePage == AppPage.LOCKED && lockedUnlocked) || lockedPreviewEntry != null
+        if (shouldSecure) window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        else window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose {
+            if (previouslySecure) window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            else window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+
     val gridCellSize = when (gridMode) {
         "compact" -> 104.dp
         "large" -> 164.dp
@@ -297,9 +407,17 @@ fun AngllaryApp(
 
     val lockedFolderLabel = stringResource(R.string.locked_folder)
 
-    val activeAlbumItems = remember(media, openedAlbum, customAlbums) {
+    val activeAlbumItems = remember(media, openedAlbum, customAlbums, favoriteUris) {
         val album = openedAlbum ?: return@remember emptyList()
         when {
+            album.quickFilter != null -> when (album.quickFilter) {
+                "favorites" -> media.filter { it.uri.toString() in favoriteUris || "content://media/external/file/${it.id}" in favoriteUris }
+                "videos" -> media.filter { it.isVideo }
+                "screenshots" -> media.filter { it.relativePath.contains("screenshot", true) || it.displayName.contains("screenshot", true) }
+                "large" -> media.filter { it.sizeBytes >= 50L * 1024L * 1024L }
+                "recent" -> media.sortedByDescending { it.displayDateMillis }.take(100)
+                else -> emptyList()
+            }
             album.customAlbumId != null -> {
                 val uris = customAlbums.firstOrNull { it.id == album.customAlbumId }?.mediaUris.orEmpty()
                 media.filter { it.uri.toString() in uris || "content://media/external/file/${it.id}" in uris }
@@ -317,17 +435,10 @@ fun AngllaryApp(
         }
     }
 
-    fun updateFavorite(item: MediaItem) {
-        val current = item.uri.toString() in favoriteUris || "content://media/external/file/${item.id}" in favoriteUris
-        galleryStore.setFavorite(item.uri.toString(), !current)
-        if (current) {
-            galleryStore.setFavorite("content://media/external/file/${item.id}", false)
-        }
-        favoriteUris = galleryStore.favoriteUris()
-    }
-
     fun showSystemMediaRequest(pendingIntent: PendingIntent?) {
         if (pendingIntent == null) {
+            pendingFavoriteChanges = emptyList()
+            pendingTrashUndoItems = emptyList()
             closeViewerAfterTrash = false
             showMessage(context, context.getString(R.string.system_trash_unavailable))
             return
@@ -337,15 +448,51 @@ fun AngllaryApp(
         }.onFailure { showMessage(context, it.message ?: context.getString(R.string.action_failed)) }
     }
 
+    LaunchedEffect(pendingUndoRestoreItems) {
+        val items = pendingUndoRestoreItems
+        if (items.isNotEmpty()) {
+            pendingUndoRestoreItems = emptyList()
+            showSystemMediaRequest(repository.createTrashRequest(items, false))
+        }
+    }
+
+    LaunchedEffect(media, libraryReady, openRecentVideoShortcut) {
+        if (openRecentVideoShortcut && libraryReady) {
+            val videos = media.filter { it.isVideo }.sortedByDescending { it.displayDateMillis }
+            val latest = videos.firstOrNull()
+            if (latest != null) {
+                openViewer(latest, videos)
+            } else {
+                showMessage(context, "No videos were found on this device.")
+            }
+            openRecentVideoShortcut = false
+        }
+    }
+
+    fun updateFavorite(item: MediaItem) {
+        val current = item.uri.toString() in favoriteUris || "content://media/external/file/${item.id}" in favoriteUris
+        val next = !current
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && item.id >= 0L) {
+            pendingFavoriteChanges = listOf(item to next)
+            showSystemMediaRequest(repository.createFavoriteWriteRequest(listOf(item)))
+        } else {
+            galleryStore.setFavorite(item.uri.toString(), next)
+            if (item.id >= 0L) galleryStore.setFavorite("content://media/external/file/${item.id}", next)
+            favoriteUris = galleryStore.favoriteUris()
+        }
+    }
+
     fun moveToTrash(item: MediaItem, shouldTrash: Boolean = true) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             closeViewerAfterTrash = false
             showMessage(context, context.getString(R.string.system_trash_requires_android_11))
             return
         }
+        pendingTrashUndoItems = if (shouldTrash) listOf(item) else emptyList()
         runCatching {
             showSystemMediaRequest(repository.createTrashRequest(listOf(item), shouldTrash))
         }.onFailure {
+            pendingTrashUndoItems = emptyList()
             closeViewerAfterTrash = false
             showMessage(context, it.message ?: context.getString(R.string.action_failed))
         }
@@ -381,6 +528,61 @@ fun AngllaryApp(
                 showMessage(context, it.message ?: context.getString(R.string.import_failed))
             }
         }
+    }
+
+    fun shareSelected() {
+        if (selectedMedia.isEmpty()) return
+        val send = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = if (selectedMedia.all { !it.isVideo }) "image/*" else "*/*"
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(selectedMedia.map { it.uri }))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        runCatching { context.startActivity(Intent.createChooser(send, "Share media")) }
+        selectedUris = emptySet()
+    }
+
+    fun favoriteSelected() {
+        if (selectedMedia.isEmpty()) return
+        val allFavorite = selectedMedia.all { it.uri.toString() in favoriteUris || "content://media/external/file/${it.id}" in favoriteUris }
+        val target = !allFavorite
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            pendingFavoriteChanges = selectedMedia.map { it to target }
+            showSystemMediaRequest(repository.createFavoriteWriteRequest(selectedMedia))
+        } else {
+            selectedMedia.forEach { item ->
+                galleryStore.setFavorite(item.uri.toString(), target)
+                if (item.id >= 0L) galleryStore.setFavorite("content://media/external/file/${item.id}", target)
+            }
+            favoriteUris = galleryStore.favoriteUris()
+        }
+        selectedUris = emptySet()
+    }
+
+    fun lockSelected() {
+        if (selectedMedia.isEmpty()) return
+        val items = selectedMedia
+        selectedUris = emptySet()
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                items.count { item ->
+                    runCatching { lockedStore.importUri(item.uri, item.displayName, item.mimeType) }.isSuccess
+                }
+            }
+            storeRevision++
+            showMessage(context, "$result of ${items.size} items copied to Locked Folder")
+        }
+    }
+
+    fun trashSelected() {
+        if (selectedMedia.isEmpty()) return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            showMessage(context, context.getString(R.string.system_trash_requires_android_11))
+            return
+        }
+        pendingTrashUndoItems = selectedMedia
+        val request = repository.createTrashRequest(selectedMedia, true)
+        showSystemMediaRequest(request)
+        selectedUris = emptySet()
     }
 
     fun unlockFolder() {
@@ -522,9 +724,14 @@ fun AngllaryApp(
                                         minCellSize = gridCellSize,
                                         onRequestPermission = { permissionLauncher.launch(mediaPermissions()) },
                                         onDateChanged = { dateLabel = formatDateLabel(it.displayDateMillis, context) },
-                                        onMediaClick = { openViewer(it, orderedMedia) },
+                                        onMediaClick = { item ->
+                                            if (pickerRequest) onPickerResult(item.uri) else openViewer(item, orderedMedia)
+                                        },
                                         onFavoriteToggle = { updateFavorite(it) },
                                         onSelectionActiveChange = { mediaSelectionActive = it },
+                                        selectedUris = selectedUris,
+                                        onSelectionChange = { selectedUris = it },
+                                        isPartialAccess = isPartialMediaAccess(context),
                                         gridState = homeGridState
                                     )
                                     MainTab.ALBUMS -> AlbumsScreen(
@@ -546,6 +753,18 @@ fun AngllaryApp(
                                         onEditCustomAlbum = { album ->
                                             renameAlbumValue = album.name
                                             editAlbumTarget = album
+                                        },
+                                        onOpenQuickView = { key, label ->
+                                            openedAlbum = OpenAlbum(name = label, quickFilter = key)
+                                            activePage = AppPage.ALBUM
+                                        },
+                                        onTogglePinned = { album ->
+                                            galleryStore.setAlbumPinned(album.id, !album.isPinned)
+                                            storeRevision++
+                                        },
+                                        onToggleHidden = { album ->
+                                            galleryStore.setAlbumHidden(album.id, !album.isHidden)
+                                            storeRevision++
                                         },
                                         listState = albumsListState
                                     )
@@ -570,7 +789,15 @@ fun AngllaryApp(
                         AppPage.TRASH -> TrashScreen(
                             media = trash,
                             onRestore = { moveToTrash(it, shouldTrash = false) },
-                            onDeleteForever = { deleteForever(it) }
+                            onDeleteForever = { deleteForever(it) },
+                            onEmptyTrash = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                    showSystemMediaRequest(repository.createDeleteRequest(trash))
+                                } else {
+                                    trash.forEach { repository.deleteDirect(it) }
+                                    reloadKey++
+                                }
+                            }
                         )
 
                         AppPage.LOCKED -> LockedFolderScreen(
@@ -656,21 +883,46 @@ fun AngllaryApp(
             }
         }
 
-        AnimatedVisibility(
-            visible = activePage == AppPage.HOME,
-            enter = fadeIn(tween(220)) + slideInVertically(tween(300)) { it / 2 },
-            exit = fadeOut(tween(150)) + slideOutVertically(tween(220)) { it / 2 },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .padding(bottom = 10.dp)
-                .blur(if (mediaSelectionActive) 17.dp else 0.dp)
-        ) {
-            AngllaryBottomBar(
-                selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it },
-                onSearch = { activePage = AppPage.SEARCH }
-            )
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 82.dp)
+        )
+
+        if (activePage == AppPage.HOME && selectedUris.isNotEmpty()) {
+            androidx.compose.material3.Surface(
+                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal = 8.dp, vertical = 10.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                shadowElevation = 12.dp
+            ) {
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text("${selectedUris.size} selected", modifier = Modifier.padding(horizontal = 6.dp), style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                    TextButton(onClick = { selectedUris = emptySet() }) { Text("Cancel") }
+                    TextButton(onClick = { shareSelected() }) { Text("Share") }
+                    TextButton(onClick = { albumTargets = selectedMedia; selectedUris = emptySet() }) { Text("Album") }
+                    TextButton(onClick = { lockSelected() }) { Text("Lock") }
+                    TextButton(onClick = { favoriteSelected() }) { Text("♥") }
+                    TextButton(onClick = { trashSelected() }) { Text("Delete") }
+                }
+            }
+        } else {
+            AnimatedVisibility(
+                visible = activePage == AppPage.HOME,
+                enter = fadeIn(tween(220)) + slideInVertically(tween(300)) { it / 2 },
+                exit = fadeOut(tween(150)) + slideOutVertically(tween(220)) { it / 2 },
+                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 10.dp)
+            ) {
+                AngllaryBottomBar(
+                    selectedTab = selectedTab,
+                    onTabSelected = { selectedTab = it },
+                    onSearch = { activePage = AppPage.SEARCH }
+                )
+            }
         }
     }
     }
@@ -683,8 +935,10 @@ fun AngllaryApp(
             isFavorite = { it.uri.toString() in favoriteUris || "content://media/external/file/${it.id}" in favoriteUris },
             onToggleFavorite = { updateFavorite(it) },
             onTrash = {
-                closeViewerAfterTrash = true
-                moveToTrash(it)
+                if (it.id >= 0L) {
+                    closeViewerAfterTrash = true
+                    moveToTrash(it)
+                } else showMessage(context, "This shared item is read-only in Angllary.")
             },
             onEditPhoto = {
                 viewerIndex = null
@@ -695,7 +949,7 @@ fun AngllaryApp(
                 editorItem = it
             },
             onLockCopy = { importIntoLockedFolder(it) },
-            onAddToAlbum = { albumTarget = it },
+            onAddToAlbum = { albumTargets = listOf(it) },
             onRemoveFromAlbum = { item ->
                 openedAlbum?.customAlbumId?.let { id ->
                     galleryStore.removeFromAlbum(id, item.uri.toString())
@@ -707,6 +961,7 @@ fun AngllaryApp(
                 viewerIndex = null
                 lockedPreviewEntry?.let(lockedStore::clearPreview)
                 lockedPreviewEntry = null
+                if (externalViewer) externalViewer = false
             }
         )
     }
@@ -751,8 +1006,8 @@ fun AngllaryApp(
                 TextButton(onClick = {
                     runCatching { galleryStore.createAlbum(newAlbumName) }
                         .onSuccess { album ->
-                            albumTarget?.let { target -> galleryStore.addToAlbum(album.id, target.uri.toString()) }
-                            albumTarget = null
+                                            albumTargets.forEach { target -> galleryStore.addToAlbum(album.id, target.uri.toString()) }
+                            albumTargets = emptyList()
                             storeRevision++
                             showNewAlbum = false
                         }
@@ -797,9 +1052,9 @@ fun AngllaryApp(
         )
     }
 
-    albumTarget?.let { item ->
+    if (albumTargets.isNotEmpty()) {
         AlertDialog(
-            onDismissRequest = { albumTarget = null },
+            onDismissRequest = { albumTargets = emptyList() },
             title = { Text(stringResource(R.string.add_to_album)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -808,9 +1063,9 @@ fun AngllaryApp(
                     }
                     customAlbums.forEach { album ->
                         TextButton(onClick = {
-                            galleryStore.addToAlbum(album.id, item.uri.toString())
+                            albumTargets.forEach { target -> galleryStore.addToAlbum(album.id, target.uri.toString()) }
                             storeRevision++
-                            albumTarget = null
+                            albumTargets = emptyList()
                             showMessage(context, context.getString(R.string.added_to_album, album.name))
                         }) {
                             Text(album.name)
@@ -824,7 +1079,7 @@ fun AngllaryApp(
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { albumTarget = null }) { Text(stringResource(R.string.close)) } }
+            confirmButton = { TextButton(onClick = { albumTargets = emptyList() }) { Text(stringResource(R.string.close)) } }
         )
     }
 }
@@ -907,4 +1162,45 @@ private fun displayName(context: Context, uri: android.net.Uri): String {
 
 private fun showMessage(context: Context, message: String) {
     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+}
+
+private fun readIncomingMediaItem(context: Context, uri: Uri): MediaItem? {
+    return runCatching {
+        val mime = context.contentResolver.getType(uri).orEmpty().ifBlank { "image/*" }
+        var name = "Shared media"
+        var size = 0L
+        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                if (nameIndex >= 0) name = cursor.getString(nameIndex).orEmpty().ifBlank { name }
+                if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) size = cursor.getLong(sizeIndex)
+            }
+        }
+        val video = mime.startsWith("video/")
+        MediaItem(
+            id = -1L,
+            uri = uri,
+            displayName = name,
+            mimeType = mime,
+            dateModifiedMillis = System.currentTimeMillis(),
+            dateTakenMillis = 0L,
+            width = 0,
+            height = 0,
+            albumName = "Shared",
+            bucketId = "",
+            relativePath = "",
+            sizeBytes = size,
+            durationMillis = 0L,
+            isVideo = video
+        )
+    }.getOrNull()
+}
+
+private fun isPartialMediaAccess(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < 34) return false
+    val selected = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) == PackageManager.PERMISSION_GRANTED
+    val images = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
+    val videos = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED
+    return selected && !(images && videos)
 }

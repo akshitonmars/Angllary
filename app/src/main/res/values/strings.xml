@@ -153,4 +153,10 @@
     <string name="security_privacy_summary">Your photos stay 100% on this device. No network tracking, no account required.</string>
     <string name="open">Open</string>
     <string name="remove_favorite">Remove favourite</string>
+    <string name="shortcut_search_short">Search</string>
+    <string name="shortcut_search_long">Search your photos and videos</string>
+    <string name="shortcut_locked_short">Locked Folder</string>
+    <string name="shortcut_locked_long">Open your private Locked Folder</string>
+    <string name="shortcut_recent_video_short">Recent video</string>
+    <string name="shortcut_recent_video_long">Open your most recent video</string>
 </resources>
