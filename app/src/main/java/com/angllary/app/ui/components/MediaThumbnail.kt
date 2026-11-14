@@ -2,11 +2,15 @@ package com.angllary.app.ui.components
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Matrix
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.util.LruCache
 import android.util.Size
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -103,29 +107,44 @@ fun MediaThumbnail(
 }
 
 private object VideoThumbnailCache {
-    // A bounded process cache keeps scrolling smooth without retaining full-size frames.
-    private val cache = object : LruCache<String, Bitmap>(36 * 1024) {
+    // Keep video preview decoding bounded: only two decodes at once and a small cache.
+    private val decodeSlots = Semaphore(2)
+    private val cache = object : LruCache<String, Bitmap>(12 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int =
             (value.byteCount / 1024).coerceAtLeast(1)
     }
 
     fun get(uri: Uri): Bitmap? = synchronized(cache) { cache.get(uri.toString()) }
 
-    fun load(context: Context, uri: Uri): Bitmap? {
-        get(uri)?.let { return it }
-
-        val frame = runCatching {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+    suspend fun load(context: Context, uri: Uri): Bitmap? = decodeSlots.withPermit {
+        get(uri)?.let { return@withPermit it }
+        val frame = try {
+            val thumbnail = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 runCatching {
-                    context.contentResolver.loadThumbnail(uri, Size(512, 512), null)
+                    context.contentResolver.loadThumbnail(uri, Size(256, 256), null)
                 }.getOrNull()
             } else null
-        }.getOrNull() ?: extractFrame(context, uri)
-
-        if (frame != null) {
-            synchronized(cache) { cache.put(uri.toString(), frame) }
+            thumbnail ?: extractFrame(context, uri)?.let(::downsample)
+        } catch (_: OutOfMemoryError) {
+            null
+        } catch (_: SecurityException) {
+            null
+        } catch (_: RuntimeException) {
+            null
         }
-        return frame
+        if (frame != null) synchronized(cache) { cache.put(uri.toString(), frame) }
+        frame
+    }
+
+    private fun downsample(source: Bitmap): Bitmap {
+        val maxSide = 256
+        if (source.width <= maxSide && source.height <= maxSide) return source
+        val scale = maxSide.toFloat() / maxOf(source.width, source.height)
+        val width = (source.width * scale).toInt().coerceAtLeast(1)
+        val height = (source.height * scale).toInt().coerceAtLeast(1)
+        val scaled = Bitmap.createScaledBitmap(source, width, height, true)
+        if (scaled !== source && !source.isRecycled) source.recycle()
+        return scaled
     }
 
     private fun extractFrame(context: Context, uri: Uri): Bitmap? {
