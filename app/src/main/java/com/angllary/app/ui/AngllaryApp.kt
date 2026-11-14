@@ -367,7 +367,7 @@ fun AngllaryApp(
 
     val lockedFolderLabel = stringResource(R.string.locked_folder)
 
-    val activeAlbumItems = remember(media, openedAlbum, customAlbums) {
+    val activeAlbumItems = remember(media, openedAlbum, customAlbums, favoriteUris) {
         val album = openedAlbum ?: return@remember emptyList()
         when {
             album.quickFilter != null -> when (album.quickFilter) {
@@ -687,6 +687,18 @@ fun AngllaryApp(
                                         onEditCustomAlbum = { album ->
                                             renameAlbumValue = album.name
                                             editAlbumTarget = album
+                                        },
+                                        onOpenQuickView = { key, label ->
+                                            openedAlbum = OpenAlbum(name = label, quickFilter = key)
+                                            activePage = AppPage.ALBUM
+                                        },
+                                        onTogglePinned = { album ->
+                                            galleryStore.setAlbumPinned(album.id, !album.isPinned)
+                                            storeRevision++
+                                        },
+                                        onToggleHidden = { album ->
+                                            galleryStore.setAlbumHidden(album.id, !album.isHidden)
+                                            storeRevision++
                                         },
                                         listState = albumsListState
                                     )
