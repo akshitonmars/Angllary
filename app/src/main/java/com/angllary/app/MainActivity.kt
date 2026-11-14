@@ -30,7 +30,7 @@ class MainActivity : FragmentActivity() {
         val isSystemDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         val isLight = when (initialThemeMode) {
             "light" -> true
-            "dark" -> false
+            "dark", "amoled" -> false
             else -> !isSystemDark
         }
         setTheme(if (isLight) R.style.Theme_Angllary_Light else R.style.Theme_Angllary_Dark)
@@ -44,7 +44,7 @@ class MainActivity : FragmentActivity() {
             val systemDark = isSystemInDarkTheme()
             val darkTheme = when (themeMode) {
                 "light" -> false
-                "dark" -> true
+                "dark", "amoled" -> true
                 else -> systemDark
             }
 
@@ -55,7 +55,7 @@ class MainActivity : FragmentActivity() {
                 }
             }
 
-            AngllaryTheme(darkTheme = darkTheme) {
+            AngllaryTheme(darkTheme = darkTheme, pureBlack = themeMode == "amoled") {
                 val repository = remember { MediaStoreRepository(contentResolver) }
                 AngllaryApp(
                     repository = repository,
