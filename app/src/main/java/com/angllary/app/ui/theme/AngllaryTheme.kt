@@ -161,16 +161,32 @@ private val DarkExtended = ExtendedColors(
     scrim = Color(0x99000000)
 )
 
+private val AmoledColors = DarkColors.copy(
+    background = Palette.CanvasDark,
+    surface = Palette.CanvasDark,
+    surfaceVariant = Palette.CanvasDark,
+    surfaceDim = Palette.CanvasDark,
+    surfaceBright = Palette.SurfaceHighDark,
+    surfaceContainerLowest = Palette.CanvasDark,
+    surfaceContainerLow = Palette.CanvasDark,
+    surfaceContainer = Palette.CanvasDark,
+    surfaceContainerHigh = Color(0xFF101010),
+    surfaceContainerHighest = Color(0xFF171717),
+    outline = Palette.DividerDark,
+    outlineVariant = Palette.DividerDark
+)
+
 @Composable
 fun AngllaryTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    pureBlack: Boolean = false,
     content: @Composable () -> Unit
 ) {
     CompositionLocalProvider(
         LocalExtendedColors provides if (darkTheme) DarkExtended else LightExtended
     ) {
         MaterialTheme(
-            colorScheme = if (darkTheme) DarkColors else LightColors,
+            colorScheme = when { pureBlack -> AmoledColors; darkTheme -> DarkColors; else -> LightColors },
             typography = AngllaryTypography,
             shapes = AngllaryShapes,
             content = content
