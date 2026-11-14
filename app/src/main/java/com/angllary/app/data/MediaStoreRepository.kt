@@ -2,6 +2,7 @@ package com.angllary.app.data
 
 import android.app.PendingIntent
 import android.content.ContentResolver
+import android.content.ContentValues
 import android.content.ContentUris
 import android.net.Uri
 import android.os.Build
@@ -12,7 +13,7 @@ class MediaStoreRepository(private val resolver: ContentResolver) {
     private val collection: Uri
         get() = MediaStore.Files.getContentUri("external")
 
-    fun loadMedia(limit: Int = 4000, trashed: Boolean = false): List<MediaItem> {
+    fun loadMedia(limit: Int = 20000, trashed: Boolean = false): List<MediaItem> {
         val projection = mutableListOf(
             MediaStore.MediaColumns._ID,
             MediaStore.MediaColumns.DISPLAY_NAME,
@@ -32,6 +33,7 @@ class MediaStoreRepository(private val resolver: ContentResolver) {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             projection += MediaStore.MediaColumns.IS_TRASHED
+            projection += MediaStore.MediaColumns.IS_FAVORITE
         }
 
         val typeColumn = MediaStore.Files.FileColumns.MEDIA_TYPE
@@ -70,6 +72,7 @@ class MediaStoreRepository(private val resolver: ContentResolver) {
                 val heightCol = column(MediaStore.MediaColumns.HEIGHT)
                 val pathCol = column(MediaStore.MediaColumns.RELATIVE_PATH)
                 val durationCol = column(MediaStore.Video.VideoColumns.DURATION)
+                val favoriteCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) column(MediaStore.MediaColumns.IS_FAVORITE) else -1
 
                 while (cursor.moveToNext() && output.size < limit) {
                     val mediaType = cursor.getInt(typeCol)
@@ -93,7 +96,8 @@ class MediaStoreRepository(private val resolver: ContentResolver) {
                         relativePath = if (pathCol >= 0) cursor.getString(pathCol).orEmpty() else "",
                         sizeBytes = if (sizeCol >= 0) cursor.getLong(sizeCol) else 0L,
                         durationMillis = if (isVideo && durationCol >= 0) cursor.getLong(durationCol) else 0L,
-                        isVideo = isVideo
+                        isVideo = isVideo,
+                        isSystemFavorite = favoriteCol >= 0 && cursor.getInt(favoriteCol) == 1
                     )
                 }
             }
@@ -122,6 +126,23 @@ class MediaStoreRepository(private val resolver: ContentResolver) {
     fun createDeleteRequest(items: List<MediaItem>): PendingIntent? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || items.isEmpty()) return null
         return MediaStore.createDeleteRequest(resolver, items.map { toMediaUri(it) })
+    }
+
+    fun createFavoriteWriteRequest(items: List<MediaItem>): PendingIntent? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || items.isEmpty()) return null
+        return MediaStore.createWriteRequest(resolver, items.map { toMediaUri(it) })
+    }
+
+    fun setSystemFavorite(item: MediaItem, favorite: Boolean): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return false
+        return try {
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.IS_FAVORITE, if (favorite) 1 else 0)
+            }
+            resolver.update(toMediaUri(item), values, null, null) > 0
+        } catch (_: Exception) {
+            false
+        }
     }
 
     fun deleteDirect(item: MediaItem): Boolean {
