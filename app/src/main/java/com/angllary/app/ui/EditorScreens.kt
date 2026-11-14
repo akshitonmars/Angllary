@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.RotateRight
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -41,6 +42,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -106,38 +108,49 @@ fun PhotoEditorScreen(
     var saving by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showingOriginal by remember { mutableStateOf(false) }
+    var showExitPrompt by remember { mutableStateOf(false) }
+    val hasUnsavedEdits = rotateQuarterTurns != 0 || cropMode != "original" ||
+        brightness != 0f || contrast != 1f || saturation != 1f
 
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    fun saveChanges() {
+        val source = bitmap
+        if (source == null || saving) return
+        saving = true
+        errorMessage = null
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val edited = renderEditedBitmap(source, rotateQuarterTurns, cropMode, brightness, contrast, saturation)
+                    MediaExportRepository(context).saveImage(edited, item.displayName).also {
+                        if (edited !== source) edited.recycle()
+                    }
+                }
+            }
+            saving = false
+            result.onSuccess { onSaved() }.onFailure {
+                errorMessage = it.message ?: context.getString(R.string.export_failed)
+            }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = { if (hasUnsavedEdits) showExitPrompt = true else onClose() },
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Column(
             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
                 .padding(top = 18.dp, bottom = 14.dp)
         ) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = rememberHapticClick(onClose)) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back)) }
+                IconButton(onClick = rememberHapticClick { if (hasUnsavedEdits) showExitPrompt = true else onClose() }) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back))
+                }
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.photo_editor), style = MaterialTheme.typography.titleLarge)
                     Text(item.displayName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
                 Button(
-                    onClick = rememberHapticClick {
-                    val source = bitmap
-                    if (source != null && !saving) {
-                        saving = true
-                        errorMessage = null
-                        scope.launch {
-                            val result = withContext(Dispatchers.IO) {
-                                runCatching {
-                                    val edited = renderEditedBitmap(source, rotateQuarterTurns, cropMode, brightness, contrast, saturation)
-                                    MediaExportRepository(context).saveImage(edited, item.displayName).also {
-                                        if (edited !== source) edited.recycle()
-                                    }
-                                }
-                            }
-                            saving = false
-                            result.onSuccess { onSaved() }.onFailure { errorMessage = it.message ?: context.getString(R.string.export_failed) }
-                        }
-                    }
-                },
+                    onClick = rememberHapticClick { saveChanges() },
                     enabled = bitmap != null && !saving,
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 15.dp, vertical = 10.dp)
@@ -245,6 +258,25 @@ fun PhotoEditorScreen(
                 Text(stringResource(R.string.editor_save_note), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             }
         }
+    }
+
+    if (showExitPrompt) {
+        AlertDialog(
+            onDismissRequest = { showExitPrompt = false },
+            title = { Text("Unsaved edits") },
+            text = { Text("Save your changes as a copy, discard them, or keep editing.") },
+            confirmButton = {
+                TextButton(onClick = { showExitPrompt = false; saveChanges() }, enabled = bitmap != null && !saving) {
+                    Text("Save copy")
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { showExitPrompt = false; onClose() }) { Text("Discard") }
+                    TextButton(onClick = { showExitPrompt = false }) { Text("Keep editing") }
+                }
+            }
+        )
     }
 }
 
