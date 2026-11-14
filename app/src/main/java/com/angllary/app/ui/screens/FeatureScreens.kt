@@ -955,7 +955,7 @@ fun SettingsScreen(
                                 border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.4f))
                             ) {
                                 Text(
-                                    "v0.5.4",
+                                    "v0.7.0",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = colors.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
