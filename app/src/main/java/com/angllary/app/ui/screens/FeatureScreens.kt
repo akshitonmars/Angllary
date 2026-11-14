@@ -509,7 +509,6 @@ fun SearchScreen(
                     formatSearchDate(item.displayDateMillis).contains(normalized, true) ||
                     matchesNaturalDate(item.displayDateMillis, normalized)
             }
-            .take(500)
             .toList()
     }
 
