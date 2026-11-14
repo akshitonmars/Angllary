@@ -123,12 +123,6 @@ fun AngllaryTopBar(
     val lockedClick = rememberHapticClick(onLockedFolder)
     val trashClick = rememberHapticClick(onTrash)
     val settingsClick = rememberHapticClick(onSettings)
-    val sideMargin by animateDpAsState(if (isScrolled) 13.dp else 0.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerMargin")
-    val topMargin by animateDpAsState(if (isScrolled) 7.dp else 0.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerTopMargin")
-    val rowHeight by animateDpAsState(if (isScrolled) 58.dp else 66.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerHeight")
-    val topRadius by animateDpAsState(if (isScrolled) 28.dp else 0.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerTopRadius")
-    val bottomRadius by animateDpAsState(if (isScrolled) 28.dp else 27.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerBottomRadius")
-    val elevation by animateDpAsState(if (isScrolled) 13.dp else 3.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerElevation")
     val menuRotation by animateFloatAsState(
         targetValue = if (menuExpanded) 90f else 0f,
         animationSpec = spring(stiffness = 520f, dampingRatio = 0.78f),
@@ -152,7 +146,7 @@ fun AngllaryTopBar(
         Column {
             Spacer(Modifier.windowInsetsTopHeight(androidx.compose.foundation.layout.WindowInsets.statusBars))
             Row(
-                modifier = Modifier.fillMaxWidth().height(rowHeight).padding(horizontal = if (isScrolled) 14.dp else 19.dp),
+                modifier = Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
