@@ -703,12 +703,21 @@ fun TrashScreen(
     media: List<MediaItem>,
     onRestore: (MediaItem) -> Unit,
     onDeleteForever: (MediaItem) -> Unit,
+    onEmptyTrash: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var confirmEmpty by remember { mutableStateOf(false) }
     Column(modifier.fillMaxSize()) {
-        Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(stringResource(R.string.recently_deleted), style = MaterialTheme.typography.headlineMedium)
-            Text(stringResource(R.string.trash_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(stringResource(R.string.recently_deleted), style = MaterialTheme.typography.headlineMedium)
+                Text(stringResource(R.string.trash_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (media.isNotEmpty()) {
+                TextButton(onClick = { confirmEmpty = true }) {
+                    Text("Empty trash", fontWeight = FontWeight.Bold)
+                }
+            }
         }
         if (media.isEmpty()) {
             EmptyState(
@@ -754,6 +763,19 @@ fun TrashScreen(
                 }
             }
         }
+    }
+    if (confirmEmpty) {
+        AlertDialog(
+            onDismissRequest = { confirmEmpty = false },
+            title = { Text("Empty Recently Deleted?") },
+            text = { Text("This permanently deletes all items in the trash. This action cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = { confirmEmpty = false; onEmptyTrash() }) {
+                    Text("Delete forever", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmEmpty = false }) { Text(stringResource(R.string.cancel)) } }
+        )
     }
 }
 
