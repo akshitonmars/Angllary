@@ -18,7 +18,8 @@ data class MediaItem(
     val durationMillis: Long,
     val isVideo: Boolean,
     val isLocked: Boolean = false,
-    val isSystemFavorite: Boolean = false
+    val isSystemFavorite: Boolean = false,
+    val dateExpiresMillis: Long? = null
 ) {
     val displayDateMillis: Long
         get() = dateTakenMillis.takeIf { it > 0L } ?: dateModifiedMillis
