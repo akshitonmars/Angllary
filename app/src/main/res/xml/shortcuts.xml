@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="search"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_search_short"
+        android:shortcutLongLabel="@string/shortcut_search_long">
+        <intent
+            android:action="com.angllary.app.action.SEARCH"
+            android:targetPackage="com.angllary.app"
+            android:targetClass="com.angllary.app.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="locked_folder"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_locked_short"
+        android:shortcutLongLabel="@string/shortcut_locked_long">
+        <intent
+            android:action="com.angllary.app.action.LOCKED_FOLDER"
+            android:targetPackage="com.angllary.app"
+            android:targetClass="com.angllary.app.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="recent_video"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_recent_video_short"
+        android:shortcutLongLabel="@string/shortcut_recent_video_long">
+        <intent
+            android:action="com.angllary.app.action.RECENT_VIDEO"
+            android:targetPackage="com.angllary.app"
+            android:targetClass="com.angllary.app.MainActivity" />
+    </shortcut>
+</shortcuts>
