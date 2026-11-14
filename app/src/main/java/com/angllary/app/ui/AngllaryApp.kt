@@ -350,14 +350,6 @@ fun AngllaryApp(
         }
     }
 
-    LaunchedEffect(pendingUndoRestoreItems) {
-        val items = pendingUndoRestoreItems
-        if (items.isNotEmpty()) {
-            pendingUndoRestoreItems = emptyList()
-            showSystemMediaRequest(repository.createTrashRequest(items, false))
-        }
-    }
-
     LaunchedEffect(storeRevision) {
         favoriteUris = galleryStore.favoriteUris() + media.filter { it.isSystemFavorite }.map { it.uri.toString() }
         customAlbums = galleryStore.customAlbums()
@@ -437,6 +429,14 @@ fun AngllaryApp(
         runCatching {
             systemMediaAction.launch(IntentSenderRequest.Builder(pendingIntent.intentSender).build())
         }.onFailure { showMessage(context, it.message ?: context.getString(R.string.action_failed)) }
+    }
+
+    LaunchedEffect(pendingUndoRestoreItems) {
+        val items = pendingUndoRestoreItems
+        if (items.isNotEmpty()) {
+            pendingUndoRestoreItems = emptyList()
+            showSystemMediaRequest(repository.createTrashRequest(items, false))
+        }
     }
 
     fun updateFavorite(item: MediaItem) {
