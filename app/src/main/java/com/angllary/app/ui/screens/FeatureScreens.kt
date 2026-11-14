@@ -13,6 +13,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -126,28 +128,50 @@ fun GalleryScreen(
     onMediaClick: (MediaItem) -> Unit,
     onFavoriteToggle: (MediaItem) -> Unit = {},
     onSelectionActiveChange: (Boolean) -> Unit = {},
+    selectedUris: Set<String> = emptySet(),
+    onSelectionChange: (Set<String>) -> Unit = {},
+    isPartialAccess: Boolean = false,
     gridState: androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier.fillMaxSize()) {
-        when {
-            !hasPermission -> PermissionState(onRequestPermission)
-            isLoading -> GalleryLoadingGrid()
-            media.isEmpty() -> EmptyState(
-                title = stringResource(R.string.empty_library_title),
-                body = stringResource(R.string.empty_library_body),
-                icon = { Icon(Icons.Outlined.Image, contentDescription = null, modifier = Modifier.size(28.dp)) }
-            )
-            else -> com.angllary.app.ui.components.MediaGrid(
-                media = media,
-                favoriteUris = favoriteUris,
-                minCellSize = minCellSize,
-                state = gridState,
-                onDateChanged = onDateChanged,
-                onMediaClick = onMediaClick,
-                onFavoriteToggle = onFavoriteToggle,
-                onSelectionActiveChange = onSelectionActiveChange
-            )
+    Column(modifier.fillMaxSize()) {
+        if (hasPermission && isPartialAccess) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 5.dp),
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 13.dp, end = 7.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Angllary can see only the photos you selected.", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = onRequestPermission) { Text("Select more") }
+                }
+            }
+        }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            when {
+                !hasPermission -> PermissionState(onRequestPermission)
+                isLoading -> GalleryLoadingGrid()
+                media.isEmpty() -> EmptyState(
+                    title = stringResource(R.string.empty_library_title),
+                    body = stringResource(R.string.empty_library_body),
+                    icon = { Icon(Icons.Outlined.Image, contentDescription = null, modifier = Modifier.size(28.dp)) }
+                )
+                else -> com.angllary.app.ui.components.MediaGrid(
+                    media = media,
+                    favoriteUris = favoriteUris,
+                    minCellSize = minCellSize,
+                    state = gridState,
+                    onDateChanged = onDateChanged,
+                    onMediaClick = onMediaClick,
+                    onFavoriteToggle = onFavoriteToggle,
+                    onSelectionActiveChange = onSelectionActiveChange,
+                    selectedUris = selectedUris,
+                    onSelectionChange = onSelectionChange
+                )
+            }
         }
     }
 }
@@ -390,6 +414,14 @@ fun SearchScreen(
                     "photos" -> !item.isVideo
                     "videos" -> item.isVideo
                     "favorites" -> item.uri.toString() in favoriteUris || "content://media/external/file/${item.id}" in favoriteUris
+                    "screenshots" -> item.relativePath.contains("screenshot", true) || item.displayName.contains("screenshot", true)
+                    "large" -> item.sizeBytes >= 50L * 1024L * 1024L
+                    "this_month" -> {
+                        val now = java.util.Calendar.getInstance()
+                        val date = java.util.Calendar.getInstance().apply { timeInMillis = item.displayDateMillis }
+                        now.get(java.util.Calendar.YEAR) == date.get(java.util.Calendar.YEAR) &&
+                            now.get(java.util.Calendar.MONTH) == date.get(java.util.Calendar.MONTH)
+                    }
                     else -> true
                 }
             }
@@ -399,7 +431,8 @@ fun SearchScreen(
                     item.albumName.contains(normalized, true) ||
                     item.relativePath.contains(normalized, true) ||
                     item.mimeType.contains(normalized, true) ||
-                    formatSearchDate(item.displayDateMillis).contains(normalized, true)
+                    formatSearchDate(item.displayDateMillis).contains(normalized, true) ||
+                    matchesNaturalDate(item.displayDateMillis, normalized)
             }
             .take(500)
             .toList()
@@ -429,20 +462,23 @@ fun SearchScreen(
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(7.dp)
         ) {
             listOf(
-                "all" to stringResource(R.string.all),
-                "photos" to stringResource(R.string.photos),
-                "videos" to stringResource(R.string.videos),
-                "favorites" to stringResource(R.string.favorites)
+                "all" to "All",
+                "photos" to "Photos",
+                "videos" to "Videos",
+                "favorites" to "Favourites",
+                "this_month" to "This month",
+                "screenshots" to "Screenshots",
+                "large" to "Large files"
             ).forEach { (key, label) ->
                 SearchFilter(
                     label = label,
                     selected = filter == key,
                     onClick = { filter = key },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.widthIn(min = 72.dp)
                 )
             }
         }
@@ -623,7 +659,14 @@ fun TrashScreen(
                         MediaThumbnail(item = item, modifier = Modifier.size(62.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(item.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(formatSearchDate(item.displayDateMillis), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                item.dateExpiresMillis?.let { expires ->
+                                    val days = ((expires - System.currentTimeMillis()).coerceAtLeast(0L) / 86_400_000L).toInt()
+                                    "$days days remaining"
+                                } ?: formatSearchDate(item.displayDateMillis),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             IconButton(onClick = { onRestore(item) }, modifier = Modifier.size(38.dp)) {
@@ -1177,3 +1220,32 @@ private fun CompositionLocalProviderColorlessIcon(content: @Composable () -> Uni
 
 private fun formatSearchDate(timestamp: Long): String =
     SimpleDateFormat("d MMM yyyy", Locale.getDefault()).format(Date(timestamp))
+
+private fun matchesNaturalDate(timestamp: Long, query: String): Boolean {
+    val normalized = query.trim().lowercase(Locale.getDefault())
+    val now = java.util.Calendar.getInstance()
+    val target = java.util.Calendar.getInstance().apply { timeInMillis = timestamp }
+    fun sameDay(a: java.util.Calendar, b: java.util.Calendar): Boolean =
+        a.get(java.util.Calendar.YEAR) == b.get(java.util.Calendar.YEAR) &&
+            a.get(java.util.Calendar.DAY_OF_YEAR) == b.get(java.util.Calendar.DAY_OF_YEAR)
+
+    return when (normalized) {
+        "today" -> sameDay(now, target)
+        "yesterday" -> {
+            now.add(java.util.Calendar.DAY_OF_YEAR, -1)
+            sameDay(now, target)
+        }
+        "last week" -> timestamp >= System.currentTimeMillis() - 7L * 24L * 60L * 60L * 1000L &&
+            timestamp <= System.currentTimeMillis()
+        else -> {
+            val monthYear = runCatching {
+                SimpleDateFormat("MMMM yyyy", Locale.getDefault()).parse(query.trim())
+            }.getOrNull()
+            monthYear?.let {
+                val parsed = java.util.Calendar.getInstance().apply { time = it }
+                parsed.get(java.util.Calendar.YEAR) == target.get(java.util.Calendar.YEAR) &&
+                    parsed.get(java.util.Calendar.MONTH) == target.get(java.util.Calendar.MONTH)
+            } ?: false
+        }
+    }
+}
