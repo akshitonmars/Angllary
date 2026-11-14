@@ -9,8 +9,8 @@ android {
         applicationId = "com.angllary.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 12
-        versionName = "0.6.0"
+        versionCode = 13
+        versionName = "0.6.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
