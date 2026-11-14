@@ -1020,7 +1020,8 @@ fun SettingsScreen(
                     options = listOf(
                         Triple("system", stringResource(R.string.theme_system), Icons.Outlined.Today),
                         Triple("light", stringResource(R.string.theme_light), Icons.Outlined.LightMode),
-                        Triple("dark", stringResource(R.string.theme_dark), Icons.Outlined.DarkMode)
+                        Triple("dark", stringResource(R.string.theme_dark), Icons.Outlined.DarkMode),
+                        Triple("amoled", "Pure black", Icons.Outlined.DarkMode)
                     ),
                     selectedId = themeMode,
                     onSelect = onThemeChange
