@@ -123,12 +123,6 @@ fun AngllaryTopBar(
     val lockedClick = rememberHapticClick(onLockedFolder)
     val trashClick = rememberHapticClick(onTrash)
     val settingsClick = rememberHapticClick(onSettings)
-    val sideMargin by animateDpAsState(if (isScrolled) 13.dp else 0.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerMargin")
-    val topMargin by animateDpAsState(if (isScrolled) 7.dp else 0.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerTopMargin")
-    val rowHeight by animateDpAsState(if (isScrolled) 58.dp else 66.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerHeight")
-    val topRadius by animateDpAsState(if (isScrolled) 28.dp else 0.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerTopRadius")
-    val bottomRadius by animateDpAsState(if (isScrolled) 28.dp else 27.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerBottomRadius")
-    val elevation by animateDpAsState(if (isScrolled) 13.dp else 3.dp, spring(stiffness = 420f, dampingRatio = 0.86f), label = "headerElevation")
     val menuRotation by animateFloatAsState(
         targetValue = if (menuExpanded) 90f else 0f,
         animationSpec = spring(stiffness = 520f, dampingRatio = 0.78f),
@@ -136,23 +130,18 @@ fun AngllaryTopBar(
     )
 
     Surface(
-        modifier = modifier.fillMaxWidth().padding(horizontal = sideMargin).padding(top = topMargin),
-        shape = RoundedCornerShape(
-            topStart = topRadius,
-            topEnd = topRadius,
-            bottomStart = bottomRadius,
-            bottomEnd = bottomRadius
-        ),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(28.dp),
         color = colors.surface,
         contentColor = colors.onSurface,
-        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = if (isScrolled) 0.85f else 0.38f)),
-        tonalElevation = if (isScrolled) 3.dp else 1.dp,
-        shadowElevation = elevation
+        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.62f)),
+        tonalElevation = 1.dp,
+        shadowElevation = 3.dp
     ) {
         Column {
             Spacer(Modifier.windowInsetsTopHeight(androidx.compose.foundation.layout.WindowInsets.statusBars))
             Row(
-                modifier = Modifier.fillMaxWidth().height(rowHeight).padding(horizontal = if (isScrolled) 14.dp else 19.dp),
+                modifier = Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(

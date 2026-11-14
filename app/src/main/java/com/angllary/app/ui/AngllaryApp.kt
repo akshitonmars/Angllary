@@ -431,60 +431,46 @@ fun AngllaryApp(
             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
         ) {
         Column(Modifier.fillMaxSize()) {
-            AnimatedContent(
-                        targetState = activePage,
-                        transitionSpec = {
-                            if (targetState.ordinal >= initialState.ordinal) {
-                                (fadeIn(tween(170)) + slideInVertically(tween(210)) { it / 5 }) togetherWith
-                                    (fadeOut(tween(130)) + slideOutVertically(tween(170)) { -it / 7 })
-                            } else {
-                                (fadeIn(tween(170)) + slideInVertically(tween(210)) { -it / 7 }) togetherWith
-                                    (fadeOut(tween(130)) + slideOutVertically(tween(170)) { it / 5 })
-                            }
-                        },
-                        label = "headerDestinationTransition"
-                    ) { page ->
-                        if (page == AppPage.HOME) {
-                            AngllaryTopBar(
-                                dateLabel = dateLabel,
-                                showDate = selectedTab == MainTab.ALL,
-                                isScrolled = headerIsScrolled,
-                                modifier = Modifier.blur(if (mediaSelectionActive) 17.dp else 0.dp),
-                                onSort = {
-                                    sortMode = if (sortMode == "newest") "oldest" else "newest"
-                                    galleryStore.setSortMode(sortMode)
-                                },
-                                onGrid = {
-                                    gridMode = when (gridMode) {
-                                        "compact" -> "comfortable"
-                                        "comfortable" -> "large"
-                                        else -> "compact"
-                                    }
-                                    galleryStore.setGridMode(gridMode)
-                                },
-                                onFavorites = { activePage = AppPage.FAVORITES },
-                                onLockedFolder = {
-                                    lockedUnlocked = false
-                                    activePage = AppPage.LOCKED
-                                },
-                                onTrash = { activePage = AppPage.TRASH },
-                                onSettings = { activePage = AppPage.SETTINGS }
-                            )
-                        } else {
-                            SubPageHeader(
-                                title = when (page) {
-                                    AppPage.SEARCH -> stringResource(R.string.search)
-                                    AppPage.FAVORITES -> stringResource(R.string.favorites)
-                                    AppPage.TRASH -> stringResource(R.string.recently_deleted)
-                                    AppPage.LOCKED -> stringResource(R.string.locked_folder)
-                                    AppPage.SETTINGS -> stringResource(R.string.settings)
-                                    AppPage.ALBUM -> openedAlbum?.name.orEmpty()
-                                    AppPage.HOME -> stringResource(R.string.app_name)
-                                },
-                                onBack = { navigateBack() }
-                            )
+            if (activePage == AppPage.HOME) {
+                AngllaryTopBar(
+                    dateLabel = dateLabel,
+                    showDate = selectedTab == MainTab.ALL,
+                    isScrolled = false,
+                    modifier = Modifier.blur(if (mediaSelectionActive) 17.dp else 0.dp),
+                    onSort = {
+                        sortMode = if (sortMode == "newest") "oldest" else "newest"
+                        galleryStore.setSortMode(sortMode)
+                    },
+                    onGrid = {
+                        gridMode = when (gridMode) {
+                            "compact" -> "comfortable"
+                            "comfortable" -> "large"
+                            else -> "compact"
                         }
-                    }
+                        galleryStore.setGridMode(gridMode)
+                    },
+                    onFavorites = { activePage = AppPage.FAVORITES },
+                    onLockedFolder = {
+                        lockedUnlocked = false
+                        activePage = AppPage.LOCKED
+                    },
+                    onTrash = { activePage = AppPage.TRASH },
+                    onSettings = { activePage = AppPage.SETTINGS }
+                )
+            } else {
+                SubPageHeader(
+                    title = when (activePage) {
+                        AppPage.SEARCH -> stringResource(R.string.search)
+                        AppPage.FAVORITES -> stringResource(R.string.favorites)
+                        AppPage.TRASH -> stringResource(R.string.recently_deleted)
+                        AppPage.LOCKED -> stringResource(R.string.locked_folder)
+                        AppPage.SETTINGS -> stringResource(R.string.settings)
+                        AppPage.ALBUM -> openedAlbum?.name.orEmpty()
+                        AppPage.HOME -> stringResource(R.string.app_name)
+                    },
+                    onBack = { navigateBack() }
+                )
+            }
 
             Box(
                 Modifier.weight(1f).fillMaxWidth().graphicsLayer {
