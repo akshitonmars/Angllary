@@ -23,8 +23,14 @@ class GalleryStore(context: Context) {
         return ids.mapNotNull { id ->
             val name = preferences.getString("album_name_$id", null) ?: return@mapNotNull null
             val uris = preferences.getStringSet("album_items_$id", emptySet())?.toSet() ?: emptySet()
-            CustomAlbum(id, name, uris)
-        }.sortedBy { it.name.lowercase() }
+            CustomAlbum(
+                id = id,
+                name = name,
+                mediaUris = uris,
+                isPinned = preferences.getBoolean("album_pinned_$id", false),
+                isHidden = preferences.getBoolean("album_hidden_$id", false)
+            )
+        }.sortedWith(compareByDescending<CustomAlbum> { it.isPinned }.thenBy { it.name.lowercase() })
     }
 
     fun createAlbum(name: String): CustomAlbum {
@@ -41,6 +47,14 @@ class GalleryStore(context: Context) {
         return CustomAlbum(id, normalized, emptySet())
     }
 
+    fun setAlbumPinned(id: String, pinned: Boolean) {
+        preferences.edit().putBoolean("album_pinned_$id", pinned).apply()
+    }
+
+    fun setAlbumHidden(id: String, hidden: Boolean) {
+        preferences.edit().putBoolean("album_hidden_$id", hidden).apply()
+    }
+
     fun renameAlbum(id: String, name: String) {
         val normalized = name.trim().take(48)
         if (normalized.isNotBlank()) preferences.edit().putString("album_name_$id", normalized).apply()
@@ -53,6 +67,8 @@ class GalleryStore(context: Context) {
             .putStringSet(KEY_ALBUM_IDS, ids)
             .remove("album_name_$id")
             .remove("album_items_$id")
+            .remove("album_pinned_$id")
+            .remove("album_hidden_$id")
             .apply()
     }
 
