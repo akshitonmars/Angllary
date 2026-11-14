@@ -17,7 +17,8 @@ data class MediaItem(
     val sizeBytes: Long,
     val durationMillis: Long,
     val isVideo: Boolean,
-    val isLocked: Boolean = false
+    val isLocked: Boolean = false,
+    val isSystemFavorite: Boolean = false
 ) {
     val displayDateMillis: Long
         get() = dateTakenMillis.takeIf { it > 0L } ?: dateModifiedMillis
@@ -26,5 +27,7 @@ data class MediaItem(
 data class CustomAlbum(
     val id: String,
     val name: String,
-    val mediaUris: Set<String>
+    val mediaUris: Set<String>,
+    val isPinned: Boolean = false,
+    val isHidden: Boolean = false
 )
