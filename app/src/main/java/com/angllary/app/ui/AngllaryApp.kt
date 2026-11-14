@@ -177,6 +177,7 @@ fun AngllaryApp(
     var pickerRequest by remember { mutableStateOf(incomingIntent?.action == Intent.ACTION_PICK || incomingIntent?.action == Intent.ACTION_GET_CONTENT) }
     var pendingFavoriteChanges by remember { mutableStateOf(emptyList<Pair<MediaItem, Boolean>>()) }
     var pendingTrashUndoItems by remember { mutableStateOf(emptyList<MediaItem>()) }
+    var pendingUndoRestoreItems by remember { mutableStateOf(emptyList<MediaItem>()) }
     val snackbarHostState = remember { SnackbarHostState() }
     var sortMode by remember { mutableStateOf(galleryStore.sortMode()) }
     var gridMode by remember { mutableStateOf(galleryStore.gridMode()) }
@@ -256,7 +257,7 @@ fun AngllaryApp(
                         actionLabel = "Undo"
                     )
                     if (action == SnackbarResult.ActionPerformed) {
-                        showSystemMediaRequest(repository.createTrashRequest(recentlyTrashed, false))
+                        pendingUndoRestoreItems = recentlyTrashed
                     }
                 }
             }
@@ -349,6 +350,14 @@ fun AngllaryApp(
         }
     }
 
+    LaunchedEffect(pendingUndoRestoreItems) {
+        val items = pendingUndoRestoreItems
+        if (items.isNotEmpty()) {
+            pendingUndoRestoreItems = emptyList()
+            showSystemMediaRequest(repository.createTrashRequest(items, false))
+        }
+    }
+
     LaunchedEffect(storeRevision) {
         favoriteUris = galleryStore.favoriteUris() + media.filter { it.isSystemFavorite }.map { it.uri.toString() }
         customAlbums = galleryStore.customAlbums()
@@ -417,19 +426,6 @@ fun AngllaryApp(
         }
     }
 
-    fun updateFavorite(item: MediaItem) {
-        val current = item.uri.toString() in favoriteUris || "content://media/external/file/${item.id}" in favoriteUris
-        val next = !current
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && item.id >= 0L) {
-            pendingFavoriteChanges = listOf(item to next)
-            showSystemMediaRequest(repository.createFavoriteWriteRequest(listOf(item)))
-        } else {
-            galleryStore.setFavorite(item.uri.toString(), next)
-            if (item.id >= 0L) galleryStore.setFavorite("content://media/external/file/${item.id}", next)
-            favoriteUris = galleryStore.favoriteUris()
-        }
-    }
-
     fun showSystemMediaRequest(pendingIntent: PendingIntent?) {
         if (pendingIntent == null) {
             pendingFavoriteChanges = emptyList()
@@ -441,6 +437,19 @@ fun AngllaryApp(
         runCatching {
             systemMediaAction.launch(IntentSenderRequest.Builder(pendingIntent.intentSender).build())
         }.onFailure { showMessage(context, it.message ?: context.getString(R.string.action_failed)) }
+    }
+
+    fun updateFavorite(item: MediaItem) {
+        val current = item.uri.toString() in favoriteUris || "content://media/external/file/${item.id}" in favoriteUris
+        val next = !current
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && item.id >= 0L) {
+            pendingFavoriteChanges = listOf(item to next)
+            showSystemMediaRequest(repository.createFavoriteWriteRequest(listOf(item)))
+        } else {
+            galleryStore.setFavorite(item.uri.toString(), next)
+            if (item.id >= 0L) galleryStore.setFavorite("content://media/external/file/${item.id}", next)
+            favoriteUris = galleryStore.favoriteUris()
+        }
     }
 
     fun moveToTrash(item: MediaItem, shouldTrash: Boolean = true) {
@@ -1015,7 +1024,7 @@ fun AngllaryApp(
 
     if (albumTargets.isNotEmpty()) {
         AlertDialog(
-            onDismissRequest = { albumTarget = null },
+            onDismissRequest = { albumTargets = emptyList() },
             title = { Text(stringResource(R.string.add_to_album)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
