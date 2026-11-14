@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.media.MediaMetadataRetriever
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
@@ -52,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
@@ -102,6 +105,7 @@ fun PhotoEditorScreen(
     var saturation by remember(item.uri) { mutableFloatStateOf(1f) }
     var saving by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showingOriginal by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
@@ -177,10 +181,10 @@ fun PhotoEditorScreen(
                             alpha = previewAlpha
                             scaleX = previewScale
                             scaleY = previewScale
-                            rotationZ = previewRotation
+                            rotationZ = if (showingOriginal) 0f else previewRotation
                         },
                         contentScale = ContentScale.Fit,
-                        colorFilter = ColorFilter.colorMatrix(photoColorMatrix(brightness, contrast, saturation))
+                        colorFilter = if (showingOriginal) null else ColorFilter.colorMatrix(photoColorMatrix(brightness, contrast, saturation))
                     )
                 }
             }
@@ -190,6 +194,26 @@ fun PhotoEditorScreen(
                     .padding(horizontal = 20.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).pointerInput(item.uri) {
+                        detectTapGestures(onPress = {
+                            showingOriginal = true
+                            tryAwaitRelease()
+                            showingOriginal = false
+                        })
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Box(Modifier.padding(horizontal = 14.dp, vertical = 13.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            if (showingOriginal) "Original preview" else "Press and hold to compare with original",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Outlined.Crop, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(stringResource(R.string.crop_ratio), style = MaterialTheme.typography.titleSmall)
