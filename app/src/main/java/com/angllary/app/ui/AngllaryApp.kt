@@ -750,7 +750,15 @@ fun AngllaryApp(
                         AppPage.TRASH -> TrashScreen(
                             media = trash,
                             onRestore = { moveToTrash(it, shouldTrash = false) },
-                            onDeleteForever = { deleteForever(it) }
+                            onDeleteForever = { deleteForever(it) },
+                            onEmptyTrash = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                    showSystemMediaRequest(repository.createDeleteRequest(trash))
+                                } else {
+                                    trash.forEach { repository.deleteDirect(it) }
+                                    reloadKey++
+                                }
+                            }
                         )
 
                         AppPage.LOCKED -> LockedFolderScreen(
