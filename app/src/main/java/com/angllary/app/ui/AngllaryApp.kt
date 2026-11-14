@@ -129,6 +129,7 @@ fun AngllaryApp(
 
     var hasPermission by remember { mutableStateOf(hasMediaAccess(context)) }
     var isLoading by remember { mutableStateOf(false) }
+    var libraryReady by remember { mutableStateOf(false) }
     var reloadKey by remember { mutableIntStateOf(0) }
     var storeRevision by remember { mutableIntStateOf(0) }
 
@@ -178,6 +179,7 @@ fun AngllaryApp(
     var pendingFavoriteChanges by remember { mutableStateOf(emptyList<Pair<MediaItem, Boolean>>()) }
     var pendingTrashUndoItems by remember { mutableStateOf(emptyList<MediaItem>()) }
     var pendingUndoRestoreItems by remember { mutableStateOf(emptyList<MediaItem>()) }
+    var openRecentVideoShortcut by remember { mutableStateOf(incomingIntent?.action == "com.angllary.app.action.RECENT_VIDEO") }
     val snackbarHostState = remember { SnackbarHostState() }
     var sortMode by remember { mutableStateOf(galleryStore.sortMode()) }
     var gridMode by remember { mutableStateOf(galleryStore.gridMode()) }
@@ -221,6 +223,19 @@ fun AngllaryApp(
             }
             Intent.ACTION_PICK, Intent.ACTION_GET_CONTENT -> {
                 pickerRequest = true
+                externalViewer = false
+            }
+            "com.angllary.app.action.SEARCH" -> {
+                activePage = AppPage.SEARCH
+                externalViewer = false
+            }
+            "com.angllary.app.action.LOCKED_FOLDER" -> {
+                lockedUnlocked = false
+                activePage = AppPage.LOCKED
+                externalViewer = false
+            }
+            "com.angllary.app.action.RECENT_VIDEO" -> {
+                openRecentVideoShortcut = true
                 externalViewer = false
             }
         }
@@ -334,9 +349,11 @@ fun AngllaryApp(
         if (!hasPermission) {
             media = emptyList()
             trash = emptyList()
+            libraryReady = false
             return@LaunchedEffect
         }
         isLoading = true
+        libraryReady = false
         try {
             val loaded = withContext(Dispatchers.IO) { repository.loadMedia() }
             media = loaded.sortedByDescending { it.displayDateMillis }
@@ -436,6 +453,19 @@ fun AngllaryApp(
         if (items.isNotEmpty()) {
             pendingUndoRestoreItems = emptyList()
             showSystemMediaRequest(repository.createTrashRequest(items, false))
+        }
+    }
+
+    LaunchedEffect(media, libraryReady, openRecentVideoShortcut) {
+        if (openRecentVideoShortcut && libraryReady) {
+            val videos = media.filter { it.isVideo }.sortedByDescending { it.displayDateMillis }
+            val latest = videos.firstOrNull()
+            if (latest != null) {
+                openViewer(latest, videos)
+            } else {
+                showMessage(context, "No videos were found on this device.")
+            }
+            openRecentVideoShortcut = false
         }
     }
 
