@@ -130,18 +130,13 @@ fun AngllaryTopBar(
     )
 
     Surface(
-        modifier = modifier.fillMaxWidth().padding(horizontal = sideMargin).padding(top = topMargin),
-        shape = RoundedCornerShape(
-            topStart = topRadius,
-            topEnd = topRadius,
-            bottomStart = bottomRadius,
-            bottomEnd = bottomRadius
-        ),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(28.dp),
         color = colors.surface,
         contentColor = colors.onSurface,
-        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = if (isScrolled) 0.85f else 0.38f)),
-        tonalElevation = if (isScrolled) 3.dp else 1.dp,
-        shadowElevation = elevation
+        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.62f)),
+        tonalElevation = 1.dp,
+        shadowElevation = 3.dp
     ) {
         Column {
             Spacer(Modifier.windowInsetsTopHeight(androidx.compose.foundation.layout.WindowInsets.statusBars))
