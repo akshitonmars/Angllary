@@ -38,6 +38,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.statusBars
@@ -56,6 +58,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.derivedStateOf
@@ -171,6 +176,8 @@ fun AngllaryApp(
     var externalViewer by remember { mutableStateOf(incomingIntent?.action == Intent.ACTION_VIEW || incomingIntent?.action == Intent.ACTION_SEND || incomingIntent?.action == Intent.ACTION_SEND_MULTIPLE) }
     var pickerRequest by remember { mutableStateOf(incomingIntent?.action == Intent.ACTION_PICK || incomingIntent?.action == Intent.ACTION_GET_CONTENT) }
     var pendingFavoriteChanges by remember { mutableStateOf(emptyList<Pair<MediaItem, Boolean>>()) }
+    var pendingTrashUndoItems by remember { mutableStateOf(emptyList<MediaItem>()) }
+    val snackbarHostState = remember { SnackbarHostState() }
     var sortMode by remember { mutableStateOf(galleryStore.sortMode()) }
     var gridMode by remember { mutableStateOf(galleryStore.gridMode()) }
     var themeMode by remember { mutableStateOf(galleryStore.themeMode()) }
@@ -238,6 +245,21 @@ fun AngllaryApp(
                 favoriteUris = galleryStore.favoriteUris() + media.filter { it.isSystemFavorite }.map { it.uri.toString() }
             }
             pendingFavoriteChanges = emptyList()
+        }
+        if (pendingTrashUndoItems.isNotEmpty()) {
+            val recentlyTrashed = pendingTrashUndoItems
+            pendingTrashUndoItems = emptyList()
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                scope.launch {
+                    val action = snackbarHostState.showSnackbar(
+                        message = if (recentlyTrashed.size == 1) "Moved to Recently Deleted" else "${recentlyTrashed.size} items moved to Recently Deleted",
+                        actionLabel = "Undo"
+                    )
+                    if (action == SnackbarResult.ActionPerformed) {
+                        showSystemMediaRequest(repository.createTrashRequest(recentlyTrashed, false))
+                    }
+                }
+            }
         }
         reloadKey++
         if (closeViewerAfterTrash) {
@@ -410,6 +432,8 @@ fun AngllaryApp(
 
     fun showSystemMediaRequest(pendingIntent: PendingIntent?) {
         if (pendingIntent == null) {
+            pendingFavoriteChanges = emptyList()
+            pendingTrashUndoItems = emptyList()
             closeViewerAfterTrash = false
             showMessage(context, context.getString(R.string.system_trash_unavailable))
             return
@@ -425,9 +449,11 @@ fun AngllaryApp(
             showMessage(context, context.getString(R.string.system_trash_requires_android_11))
             return
         }
+        pendingTrashUndoItems = if (shouldTrash) listOf(item) else emptyList()
         runCatching {
             showSystemMediaRequest(repository.createTrashRequest(listOf(item), shouldTrash))
         }.onFailure {
+            pendingTrashUndoItems = emptyList()
             closeViewerAfterTrash = false
             showMessage(context, it.message ?: context.getString(R.string.action_failed))
         }
@@ -514,6 +540,7 @@ fun AngllaryApp(
             showMessage(context, context.getString(R.string.system_trash_requires_android_11))
             return
         }
+        pendingTrashUndoItems = selectedMedia
         val request = repository.createTrashRequest(selectedMedia, true)
         showSystemMediaRequest(request)
         selectedUris = emptySet()
@@ -809,6 +836,11 @@ fun AngllaryApp(
             }
         }
 
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 82.dp)
+        )
+
         if (activePage == AppPage.HOME && selectedUris.isNotEmpty()) {
             androidx.compose.material3.Surface(
                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal = 8.dp, vertical = 10.dp),
@@ -818,14 +850,14 @@ fun AngllaryApp(
                 shadowElevation = 12.dp
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text("${selectedUris.size} selected", modifier = Modifier.padding(horizontal = 6.dp), style = MaterialTheme.typography.labelLarge, maxLines = 1)
                     TextButton(onClick = { selectedUris = emptySet() }) { Text("Cancel") }
                     TextButton(onClick = { shareSelected() }) { Text("Share") }
-                    TextButton(onClick = { albumTargets = selectedMedia }) { Text("Album") }
+                    TextButton(onClick = { albumTargets = selectedMedia; selectedUris = emptySet() }) { Text("Album") }
                     TextButton(onClick = { lockSelected() }) { Text("Lock") }
                     TextButton(onClick = { favoriteSelected() }) { Text("♥") }
                     TextButton(onClick = { trashSelected() }) { Text("Delete") }
