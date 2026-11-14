@@ -185,10 +185,15 @@ fun AlbumsScreen(
     onOpenDeviceAlbum: (String, String) -> Unit,
     onOpenCustomAlbum: (String, String) -> Unit,
     onEditCustomAlbum: (CustomAlbum) -> Unit,
+    onOpenQuickView: (String, String) -> Unit = { _, _ -> },
+    onTogglePinned: (CustomAlbum) -> Unit = {},
+    onToggleHidden: (CustomAlbum) -> Unit = {},
     listState: LazyListState,
     modifier: Modifier = Modifier
 ) {
     val createAlbumClick = rememberHapticClick(onCreateAlbum)
+    val visibleCustomAlbums = customAlbums.filterNot { it.isHidden }
+    val hiddenCustomAlbums = customAlbums.filter { it.isHidden }
     val groups = remember(media) {
         media.filter { it.albumName.isNotBlank() }
             .groupBy { it.bucketId.ifBlank { it.albumName } }
@@ -202,6 +207,45 @@ fun AlbumsScreen(
         contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 124.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Text("Quick views", style = MaterialTheme.typography.titleMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(
+                        Triple("favorites", "Favourites", Icons.Outlined.Collections),
+                        Triple("videos", "Videos", Icons.Outlined.VideoLibrary),
+                        Triple("screenshots", "Screenshots", Icons.Outlined.Image),
+                        Triple("recent", "Recently added", Icons.Outlined.Today),
+                        Triple("large", "Large files", Icons.Outlined.Folder)
+                    ).forEach { (key, label, icon) ->
+                        Surface(
+                            onClick = rememberHapticClick { onOpenQuickView(key, label) },
+                            shape = RoundedCornerShape(15.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 13.dp, vertical = 11.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(7.dp)
+                            ) {
+                                Icon(icon, contentDescription = null, modifier = Modifier.size(17.dp))
+                                Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                            }
+                        }
+                    }
+                }
+                Text(
+                    "Device folders mirror storage. Personal albums are virtual and never move your files.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -230,20 +274,20 @@ fun AlbumsScreen(
             }
         }
 
-        if (customAlbums.isNotEmpty()) {
+        if (visibleCustomAlbums.isNotEmpty()) {
             item {
                 Text(stringResource(R.string.your_albums), style = MaterialTheme.typography.titleMedium)
             }
             item {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxWidth().height((216f * (customAlbums.size / 2 + customAlbums.size % 2)).dp),
+                    modifier = Modifier.fillMaxWidth().height((216f * (visibleCustomAlbums.size / 2 + visibleCustomAlbums.size % 2)).dp),
                     userScrollEnabled = false,
                     contentPadding = PaddingValues(bottom = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    gridItems(customAlbums, key = { it.id }) { album ->
+                    gridItems(visibleCustomAlbums, key = { it.id }) { album ->
                         val albumMedia = media.filter { it.uri.toString() in album.mediaUris }
                         AlbumCard(
                             title = album.name,
@@ -259,6 +303,14 @@ fun AlbumsScreen(
                                     }
                                     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                         DropdownMenuItem(
+                                            text = { Text(if (album.isPinned) "Unpin album" else "Pin album") },
+                                            onClick = rememberHapticClick { expanded = false; onTogglePinned(album) }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Hide album") },
+                                            onClick = rememberHapticClick { expanded = false; onToggleHidden(album) }
+                                        )
+                                        DropdownMenuItem(
                                             text = { Text(stringResource(R.string.manage_album)) },
                                             onClick = rememberHapticClick { expanded = false; onEditCustomAlbum(album) }
                                         )
@@ -266,6 +318,28 @@ fun AlbumsScreen(
                                 }
                             }
                         )
+                    }
+                }
+            }
+        }
+
+        if (hiddenCustomAlbums.isNotEmpty()) {
+            item {
+                var showHidden by remember { mutableStateOf(false) }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TextButton(onClick = { showHidden = !showHidden }) {
+                        Text(if (showHidden) "Hide hidden albums" else "Hidden albums (${hiddenCustomAlbums.size})")
+                    }
+                    if (showHidden) {
+                        hiddenCustomAlbums.forEach { album ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(album.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                                TextButton(onClick = { onToggleHidden(album) }) { Text("Unhide") }
+                            }
+                        }
                     }
                 }
             }
