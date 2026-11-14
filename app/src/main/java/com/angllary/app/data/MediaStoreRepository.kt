@@ -34,6 +34,7 @@ class MediaStoreRepository(private val resolver: ContentResolver) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             projection += MediaStore.MediaColumns.IS_TRASHED
             projection += MediaStore.MediaColumns.IS_FAVORITE
+            projection += MediaStore.MediaColumns.DATE_EXPIRES
         }
 
         val typeColumn = MediaStore.Files.FileColumns.MEDIA_TYPE
@@ -73,6 +74,7 @@ class MediaStoreRepository(private val resolver: ContentResolver) {
                 val pathCol = column(MediaStore.MediaColumns.RELATIVE_PATH)
                 val durationCol = column(MediaStore.Video.VideoColumns.DURATION)
                 val favoriteCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) column(MediaStore.MediaColumns.IS_FAVORITE) else -1
+                val expiresCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) column(MediaStore.MediaColumns.DATE_EXPIRES) else -1
 
                 while (cursor.moveToNext() && output.size < limit) {
                     val mediaType = cursor.getInt(typeCol)
@@ -97,7 +99,8 @@ class MediaStoreRepository(private val resolver: ContentResolver) {
                         sizeBytes = if (sizeCol >= 0) cursor.getLong(sizeCol) else 0L,
                         durationMillis = if (isVideo && durationCol >= 0) cursor.getLong(durationCol) else 0L,
                         isVideo = isVideo,
-                        isSystemFavorite = favoriteCol >= 0 && cursor.getInt(favoriteCol) == 1
+                        isSystemFavorite = favoriteCol >= 0 && cursor.getInt(favoriteCol) == 1,
+                        dateExpiresMillis = if (expiresCol >= 0 && !cursor.isNull(expiresCol)) cursor.getLong(expiresCol) * 1000L else null
                     )
                 }
             }
